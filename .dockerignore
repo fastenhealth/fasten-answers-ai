@@ -1,0 +1,18 @@
+# Virtual env
+venv/
+
+# Config code files
+*.pyc
+__pycache__/
+
+# Code editor
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Temporal files
+*.tmp
+*.bak
+
