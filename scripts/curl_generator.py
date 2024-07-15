@@ -1,10 +1,11 @@
 import requests
 
-def generar_comando_curl(query, k=3, threshold=0.2):
+
+def generate_curl_command(query, k=3, threshold=0.2):
     query_encoded = requests.utils.quote(query)
     
-    comando_curl = f'curl -N "http://localhost:8000/generate?query={query_encoded}&k={k}&threshold={threshold}"'
-    return comando_curl
+    curl_command = f'curl -N "http://localhost:8000/generate?query={query_encoded}&k={k}&threshold={threshold}"'
+    return curl_command
 
 def main():
     while True:
@@ -14,9 +15,9 @@ def main():
         k = 3
         threshold = 0.2
         
-        comando_curl = generar_comando_curl(query, k, threshold)
+        curl_command = generate_curl_command(query, k, threshold)
         print("Generated curl command:")
-        print(comando_curl)
+        print(curl_command)
         print()  
 
 if __name__ == "__main__":
