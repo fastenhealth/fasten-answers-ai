@@ -18,7 +18,6 @@ def main():
         curl_command = generate_curl_command(query, k, threshold)
         print("Generated curl command:")
         print(curl_command)
-        print()  
 
 if __name__ == "__main__":
     main()
