@@ -8,11 +8,12 @@ from llama_index.core.schema import BaseNode, Node
 from llama_index.core import ChatPromptTemplate, PromptTemplate
 import openai
 
+from .sampling_data import get_total_tokens_from_string
 from .settings import QUESTION_GEN_SYS_TMPL, QUESTION_GEN_USER_TMPL, \
     OPENAI_MODEL, OPENAI_MODEL_EMBEDDING, MAX_TOKENS, logger
 
 
-def create_json_nodes(data: dict):
+def create_json_nodes_llamaindex_test(data: dict):
     nodes = []
     for entry in data.get("entry", []):
         if "resource" in entry:
@@ -25,13 +26,6 @@ def create_json_nodes(data: dict):
                 metadata={"resourceType": resource_type, "id": resource_id}
             ))
     return nodes
-
-
-def get_total_tokens_from_string(string: str,
-                                 encoding=OPENAI_MODEL_EMBEDDING) -> int:
-    """Returns the number of tokens in a text string."""
-    return len(encoding.encode(string)) 
-
 
 def generate_nodes_tokens_stats(
     nodes: List[BaseNode],
@@ -68,7 +62,7 @@ def openai_create_completion(system_prompt,
                              max_tokens=MAX_TOKENS,
                              OpenAI_model=OPENAI_MODEL):
     try:
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model=OpenAI_model,
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -108,6 +102,16 @@ def generate_qa_pairs(
             openai_response = openai_create_completion(system_prompt,
                                                         user_prompt)
             results[f"node_{idx}"] = {"context": context_str,
-                                    "openai_response": openai_response}
+                                    "openai_response": openai_response
+                                    # .choices[0].message.content,
+                                    # "completion_tokens": openai_response.usage.completion_tokens,
+                                    # "prompt_tokens": openai_response.usage.prompt_tokens,
+                                    # "total_tokens": openai_response.usage.total_tokens,
+                                    # "result": 1
+                                    }
+        else:
+            openai_response = {"context": f"Total tokens {total_tokens} exceded limit",
+                               "result": 0}
+            
     
     return results

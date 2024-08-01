@@ -2,8 +2,10 @@ from fastapi.responses import StreamingResponse
 
 from .llama_client import llm_client
 from ..config.settings import logger
+from ..config.profiling import profile
 
 
+@profile
 def process_search_output(search_results):
     logger.info("Processing search results")
     processed_contents = []
@@ -30,6 +32,7 @@ def process_search_output(search_results):
     return concatenated_content
 
 
+@profile
 def stream_llm_response(concatenated_content, query):
     logger.info("Streaming LLM response")
 

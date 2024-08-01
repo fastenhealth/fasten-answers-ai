@@ -1,25 +1,27 @@
 import requests
 import json
 
-from ..config.settings import settings, logger
-from ..config.profiling import profile
+class Settings:
+    llama_host = "http://localhost:8080"
+    llama_prompt = ("You are an intelligent and polite medical assistant "
+                    "who provides detailed and "
+                    "helpful answers to user's medical questions, "
+                    "including accurate references where applicable.")
 
+settings = Settings()
 
 class LlamaCppClient:
     def __init__(self, base_url=settings.llama_host):
         self.base_url = base_url
-        self.system_prompt = settings.llama_prompt
+        self.llama_prompt = settings.llama_prompt
         self.conversation_history = []
 
-    @profile
-    def chat(self, message, context, params=None):
-        self.conversation_history.append(f"User: {message}")
-
+    def chat(self, message, params=None):
         if params is None:
             params = {
                 "n_predict": 400,
                 "temperature": 0.7,
-                "stop": ["</s>", "User:", "Assistant:"],
+                "stop": ["<|eot_id|>"],
                 "repeat_last_n": 256,
                 "repeat_penalty": 1.18,
                 "top_k": 40,
@@ -32,18 +34,25 @@ class LlamaCppClient:
                 "mirostat": 0,
                 "mirostat_tau": 5.0,
                 "mirostat_eta": 0.1,
+                "n_keep": 33,
                 "stream": True
             }
 
-        prompt = f"{self.system_prompt}\n\n \
-            Context: {context}\n\n" + "\n".join(self.conversation_history) + "\nAssistant:"
+        
+
+        # Construir el prompt con la historia de la conversación
+        prompt = ("<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+                  f"{self.llama_prompt}<|eot_id|>\n"
+                  f"<|start_header_id|>user<|end_header_id|>\n\n"
+                  f"{message}<|eot_id|>\n"
+                  "<|start_header_id|>assistant<|end_header_id|>"
+                  )
+
 
         data = {
             "prompt": prompt,
             **params
         }
-
-        logger.info(f"Sending request to Llama server with prompt: {prompt}")
 
         response = requests.post(f"{self.base_url}/completion",
                                  json=data, stream=True)
@@ -55,17 +64,13 @@ class LlamaCppClient:
                     decoded_line = line.decode('utf-8')
                     if decoded_line.startswith('data: '):
                         content = json.loads(decoded_line[6:])
-                        if content['stop']:
-                            break
                         chunk = content['content']
                         full_content += chunk
                         yield chunk
-
-            # Update conversation_history with the full response
-            self.conversation_history.append(f"Assistant: {full_content.strip()}")
+                        if content['stop']:
+                            break
         else:
-            logger.error(f"Error: {response.status_code}, {response.text}")
+            print(f"Error: {response.status_code}, {response.text}")
             raise Exception(f"Error: {response.status_code}, {response.text}")
-
 
 llm_client = LlamaCppClient()

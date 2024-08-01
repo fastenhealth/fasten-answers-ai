@@ -1,6 +1,8 @@
 from ..config.settings import settings, logger
+from ..config.profiling import profile
 
 
+@profile
 def search_query(query_text, embedding_model,
                  es_client, index_name=settings.index_name,
                  k=3, threshold=0.2):

@@ -115,3 +115,9 @@ dmypy.json
 .idea/
 *.sublime-project
 *.sublime-workspace
+
+# data
+*/data
+*.json
+*.jsonl
+/model
