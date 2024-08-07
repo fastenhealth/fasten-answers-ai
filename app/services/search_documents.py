@@ -1,3 +1,5 @@
+import json
+
 from ..config.settings import settings, logger
 from ..config.profiling import profile
 
@@ -39,6 +41,6 @@ def search_query(query_text, embedding_model,
     logger.info(f"Found {len(filtered_results)} \
         results for query: {query_text}")
     return [{"score": result['_score'],
-             "content": result['_source']['content'],
+             "content": str(result['_source']['content']),
              "metadata": result['_source'].get('metadata', {})}
             for result in filtered_results]

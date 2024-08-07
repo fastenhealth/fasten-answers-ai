@@ -1,4 +1,5 @@
 import os
+import json
 
 import fitz
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -46,3 +47,28 @@ def index_pdf(pdf_path, embedding_model,
         logger.info(f"Chunk indexed: {content[:30]}...")
     es_client.indices.refresh(index=index_name)
     logger.info(f"PDF {os.path.basename(pdf_path)} indexed successfully.")
+
+
+def bulk_load_json_nodes_llamaindex(data: dict,
+                                    embedding_model,
+                                    index_name):
+    """
+    Function to load in bulk mode a JSON file FHIR for first time
+    """
+    for entry in data.get("entry", []):
+        if "resource" in entry:
+            resource_type = entry.get("resourceType")
+            resource_id = entry.get("resource_id")
+            node_text = entry.get("resource")
+            node_embedding = embedding_model.encode(node_text)
+            yield {
+                "_index": index_name,
+                "_source": {
+                    "content": node_text,
+                    "embedding": node_embedding,
+                    "metadata": {
+                        "resourceType": resource_type,
+                        "resource_id": resource_id
+                    }
+                }
+            }
