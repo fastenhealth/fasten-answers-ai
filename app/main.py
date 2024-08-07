@@ -1,13 +1,16 @@
+import json
 import os
 
-from fastapi import FastAPI, UploadFile, File
+from elasticsearch import helpers
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
-from .db.index_documents import index_pdf
-from .config.elasticsearch_config import get_es_client
+from .db.index_documents import index_pdf, \
+    bulk_load_json_nodes_llamaindex
+from .config.elasticsearch_config import create_index_if_not_exists
 from .services.search_documents import search_query
 from .services.process_search_output import process_search_output, \
-      stream_llm_response
+    stream_llm_response
 from .models.sentence_transformer import get_sentence_transformer
 from .config.settings import settings, logger
 
@@ -18,16 +21,9 @@ os.makedirs(settings.upload_dir, exist_ok=True)
 
 # Initialize SentenceTransformer model and elastic client
 embedding_model = get_sentence_transformer()
-es_client = get_es_client()
 
-
-def create_index_if_not_exists(index_name):
-    if not es_client.indices.exists(index=index_name):
-        es_client.indices.create(index=index_name)
-        logger.info(f"Index '{index_name}' created.")
-
-
-create_index_if_not_exists(settings.index_name)
+# Create elasticsearch index
+es_client = create_index_if_not_exists(settings.index_name)
 
 
 @app.post("/upload")
@@ -40,11 +36,46 @@ async def upload_file(file: UploadFile = File(...)):
     return {"filename": file.filename}
 
 
+@app.post("/bulk_load")
+async def bulk_load(file: UploadFile = File(...)):
+    data = await file.read()
+    # json to dict
+    json_data = json.loads(data)
+    # Bulk load to Elasticsearch
+    try:
+        helpers.bulk(es_client,
+                     bulk_load_json_nodes_llamaindex(json_data,
+                                                     embedding_model,
+                                                     settings.index_name))
+        logger.info(f"Bulk load completed for file: {file.filename}")
+        return {"status": "success", "filename": file.filename}
+    except Exception as e:
+        logger.error(f"Bulk load failed: {str(e)}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.delete("/delete_all_documents")
+async def delete_all_documents(index_name: str):
+    try:
+        es_client.delete_by_query(index=index_name, body={
+            "query": {
+                "match_all": {}
+            }
+        })
+        logger.info(f"All documents deleted from index '{index_name}'")
+        return {"status": "success",
+                "message": f"All documents deleted from index '{index_name}'"}
+    except Exception as e:
+        logger.error(f"Failed to delete documents: {str(e)}")
+        raise HTTPException(status_code=500,
+                            detail=f"Failed to delete documents: {str(e)}")
+
+
 @app.get("/search")
 async def search_documents(query: str, k: int = 5, threshold: float = 0):
     results = search_query(query, embedding_model, es_client, k=k,
                            threshold=threshold)
-    return JSONResponse(content=results)
+    return results
 
 
 @app.get("/generate")
@@ -52,7 +83,7 @@ async def answer_query(query: str, k: int = 5, threshold: float = 0):
     results = search_query(query, embedding_model, es_client, k=k,
                            threshold=threshold)
     if not results:
-        concatenated_content = f"No results found for query: {query}"
+        concatenated_content = "There is no context"
     else:
         concatenated_content = process_search_output(results)
     concatenated_content = process_search_output(results)

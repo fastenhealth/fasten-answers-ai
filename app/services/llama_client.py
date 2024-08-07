@@ -9,18 +9,16 @@ class LlamaCppClient:
     def __init__(self, base_url=settings.llama_host):
         self.base_url = base_url
         self.system_prompt = settings.llama_prompt
-        self.conversation_history = []
 
     @profile
     def chat(self, message, context, params=None):
-        self.conversation_history.append(f"User: {message}")
 
         if params is None:
             params = {
                 "n_predict": 400,
-                "temperature": 0.7,
-                "stop": ["</s>", "User:", "Assistant:"],
-                "repeat_last_n": 256,
+                "temperature": 0.8,
+                "stop": ["<|eot_id|>"],
+                "repeat_last_n": 64,
                 "repeat_penalty": 1.18,
                 "top_k": 40,
                 "top_p": 0.95,
@@ -34,9 +32,19 @@ class LlamaCppClient:
                 "mirostat_eta": 0.1,
                 "stream": True
             }
-
-        prompt = f"{self.system_prompt}\n\n \
-            Context: {context}\n\n" + "\n".join(self.conversation_history) + "\nAssistant:"
+        
+        prompt = ("<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
+                  f"{self.system_prompt}<|eot_id|>\n"
+                  f"<|start_header_id|>user<|end_header_id|>\n\n"
+                  "Context information is below.\n"
+                  "---------------------\n"
+                  f"{context}\n"
+                  "---------------------\n"
+                  "Given the context information (if there is any), "
+                  "this is my message: "
+                  f"{message}<|eot_id|>\n"
+                  "<|start_header_id|>assistant<|end_header_id|>"
+                  )
 
         data = {
             "prompt": prompt,
@@ -47,6 +55,7 @@ class LlamaCppClient:
 
         response = requests.post(f"{self.base_url}/completion",
                                  json=data, stream=True)
+
 
         if response.status_code == 200:
             full_content = ""
@@ -61,8 +70,6 @@ class LlamaCppClient:
                         full_content += chunk
                         yield chunk
 
-            # Update conversation_history with the full response
-            self.conversation_history.append(f"Assistant: {full_content.strip()}")
         else:
             logger.error(f"Error: {response.status_code}, {response.text}")
             raise Exception(f"Error: {response.status_code}, {response.text}")

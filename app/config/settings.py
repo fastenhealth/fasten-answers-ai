@@ -10,10 +10,10 @@ class Settings:
                                           "all-MiniLM-L6-v2")
     llama_host: str = os.getenv("LLAMA_HOST", "http://localhost:8080")
     llama_prompt: str = os.getenv("LLAMA_PROMPT",
-                                  "A chat between a curious user and an intelligent, \
-                                   polite medical assistant. The assistant provides detailed,\
-                                    helpful answers to the user's medical questions,\
-                                    including accurate references where applicable.")
+                                 ( "A chat between a curious user and an intelligent, "
+                                   "polite medical assistant. The assistant provides detailed, "
+                                   "helpful answers to the user's medical questions, "
+                                   "including accurate references where applicable."))
     index_name: str = os.getenv("INDEX_NAME", "fasten-index")
     upload_dir: str = os.getenv("UPLOAD_DIR", "./data/")
 

@@ -4,12 +4,7 @@ import random
 
 from llama_index.core.schema import BaseNode, Node
 
-from .settings import OPENAI_MODEL_EMBEDDING
-
-
-import json
-import random
-from typing import List
+from settings import OPENAI_MODEL_EMBEDDING
 
 
 def get_total_tokens_from_string(string: str,

@@ -27,6 +27,7 @@ def create_json_nodes_llamaindex_test(data: dict):
             ))
     return nodes
 
+
 def generate_nodes_tokens_stats(
     nodes: List[BaseNode],
     question_gen_template: ChatPromptTemplate,
@@ -35,7 +36,7 @@ def generate_nodes_tokens_stats(
 ) -> List[Tuple[str, str]]:
     """Generate tokens stats."""
     tokens_stats = []
-    
+
     for _, node in enumerate(nodes):
         context_str = node.get_content(metadata_mode="all")
         fmt_messages = question_gen_template.format_messages(
@@ -43,10 +44,10 @@ def generate_nodes_tokens_stats(
             context_str=context_str,
         )
         text = fmt_messages[0].content + " " + fmt_messages[1].content
-        
+
         num_tokens = get_total_tokens_from_string(text, encoding)
         tokens_stats.append(num_tokens)
-            
+
     return tokens_stats
 
 
@@ -79,39 +80,29 @@ def openai_create_completion(system_prompt,
 
 
 def generate_qa_pairs(
-    nodes: List[BaseNode],
+    context_str: str,
     system_prompt=QUESTION_GEN_SYS_TMPL,
     user_prompt=QUESTION_GEN_USER_TMPL,
     num_questions_per_chunk: int = 5
 ) -> Dict[str, Dict[str, str]]:
     """Generate questions."""
-    results = {}
-    for idx, node in enumerate(nodes):
-        # print(f"Node {idx}/{len(nodes)}")
-        context_str = node.get_content(metadata_mode="all")
-        
-        system_prompt = system_prompt.format(
-            num_questions_per_chunk=num_questions_per_chunk)
-        user_prompt = user_prompt.format(
-            context_str=context_str
-        )
-        
-        total_tokens = get_total_tokens_from_string(system_prompt
-                                                    + user_prompt)
-        if total_tokens < 10000:
-            openai_response = openai_create_completion(system_prompt,
-                                                        user_prompt)
-            results[f"node_{idx}"] = {"context": context_str,
-                                    "openai_response": openai_response
-                                    # .choices[0].message.content,
-                                    # "completion_tokens": openai_response.usage.completion_tokens,
-                                    # "prompt_tokens": openai_response.usage.prompt_tokens,
-                                    # "total_tokens": openai_response.usage.total_tokens,
-                                    # "result": 1
-                                    }
-        else:
-            openai_response = {"context": f"Total tokens {total_tokens} exceded limit",
-                               "result": 0}
-            
-    
+
+    system_prompt = system_prompt.format(
+        num_questions_per_chunk=num_questions_per_chunk)
+    user_prompt = user_prompt.format(
+        context_str=context_str
+    )
+
+    total_tokens = get_total_tokens_from_string(system_prompt
+                                                + user_prompt)
+    if total_tokens < 10000:
+        openai_response = openai_create_completion(system_prompt,
+                                                   user_prompt)
+        results = {
+            "context": context_str,
+            "openai_response": openai_response
+        }
+    else:
+        openai_response = {"context": f"Total tokens {total_tokens} exceded limit",
+                           "result": 0}
     return results
