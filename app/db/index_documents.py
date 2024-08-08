@@ -3,6 +3,8 @@ import json
 
 import fitz
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from llama_index.core import Document
+from llama_index.core.node_parser import SentenceSplitter
 
 from ..config.settings import settings, logger
 
@@ -12,6 +14,13 @@ text_splitter = RecursiveCharacterTextSplitter(
     chunk_size=300,
     chunk_overlap=50,
     length_function=len,
+)
+
+json_text_splitter = RecursiveCharacterTextSplitter(
+    separators=[',', ':', ' ', ''],
+    chunk_size=600,
+    chunk_overlap=50,
+    length_function=len
 )
 
 
@@ -49,9 +58,55 @@ def index_pdf(pdf_path, embedding_model,
     logger.info(f"PDF {os.path.basename(pdf_path)} indexed successfully.")
 
 
-def bulk_load_json_nodes_llamaindex(data: dict,
-                                    embedding_model,
-                                    index_name):
+def create_documents_from_json(data: dict,
+                               text_splitter=json_text_splitter):
+    documents = []
+
+    for entry in data.get("entry", []):
+        if "resource" in entry:
+            resource = entry["resource"]
+            resource_type = resource.get("resourceType")
+            resource_id = resource.get("id")
+
+            entry_text = json.dumps(resource)
+
+            chunks = text_splitter.split_text(entry_text)
+            for chunk in chunks:
+                documents.append(Document(
+                    text=chunk.replace('\"', '').replace('\\', ''),
+                    metadata={"resourceType": resource_type,
+                              "resource_id": resource_id}
+                ))
+    return documents
+
+
+def bulk_load_from_lamaindex_documents(documents,
+                                       embedding_model,
+                                       index_name):
+    """
+    Function to load in bulk mode a JSON file FHIR for first time
+    """
+    for document in documents:
+        resource_type = document.metadata("resourceType")
+        resource_id = document.metadata("resource_id")
+        document_text = document.text
+        document_embedding = embedding_model.encode(document_text)
+        yield {
+            "_index": index_name,
+            "_source": {
+                "content": document_text,
+                "embedding": document_embedding,
+                "metadata": {
+                    "resourceType": resource_type,
+                    "resource_id": resource_id
+                }
+            }
+        }
+
+
+def bulk_load_from_json_file(data: dict,
+                             embedding_model,
+                             index_name):
     """
     Function to load in bulk mode a JSON file FHIR for first time
     """

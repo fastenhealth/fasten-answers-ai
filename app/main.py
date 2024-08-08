@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import JSONResponse
 
 from .db.index_documents import index_pdf, \
-    bulk_load_json_nodes_llamaindex
+    bulk_load_from_json_file, bulk_load_from_lamaindex_documents
 from .config.elasticsearch_config import create_index_if_not_exists
 from .services.search_documents import search_query
 from .services.process_search_output import process_search_output, \
@@ -44,9 +44,9 @@ async def bulk_load(file: UploadFile = File(...)):
     # Bulk load to Elasticsearch
     try:
         helpers.bulk(es_client,
-                     bulk_load_json_nodes_llamaindex(json_data,
-                                                     embedding_model,
-                                                     settings.index_name))
+                     bulk_load_from_json_file(json_data,
+                                              embedding_model,
+                                              settings.index_name))
         logger.info(f"Bulk load completed for file: {file.filename}")
         return {"status": "success", "filename": file.filename}
     except Exception as e:
