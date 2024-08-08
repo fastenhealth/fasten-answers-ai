@@ -6,45 +6,96 @@ import requests
 from clearml import Task
 
 
-def calculate_retrieval_metrics(num_sampled_questions,
-                                endpoint_url):
+def calculate_retrieval_metrics(openai_responses,
+                                num_sampled_questions,
+                                endpoint_url,
+                                k=5):
+    # Initialize counters and sums for metrics
+    total_questions = 0
+    total_contexts_found = 0
+    position_sum = 0
+    reciprocal_rank_sum = 0
+    precision_sum = 0
+    recall_sum = 0
+    openai_json_error = 0
+
     # Iterate over the OpenAI responses
-    for response in openai_responses:
+    for response_id, response in enumerate(openai_responses):
         custom_id = response["custom_id"]
-        questions_and_answers = json.loads(
-            response["response"]["body"]["choices"][0]["message"]["content"]
-        )["questions_and_answers"]
+
+        content = response["response"]["body"]["choices"][0]["message"]["content"]
+
+        try:
+            questions_and_answers = json.loads(content)["questions_and_answers"]
+        except json.JSONDecodeError as e:
+            openai_json_error = +1
+            if openai_json_error % 100 == 0:
+                print(response_id)
+            continue  # Skip to the next response if there's an error
 
         context = entry_dict.get(custom_id)
-        
-        if num_sampled_questions and len(questions_and_answers) > 0:
-            questions_and_answers = random.choice(questions_and_answers)
 
-        if context:
-            context_str = context["resource"]
+        if len(questions_and_answers) > 0:
+            # Sample questions to measure
+            if num_sampled_questions and len(questions_and_answers) > 0:
+                questions_and_answers = [random.choice(questions_and_answers)]
 
-            for qa in questions_and_answers:
-                question = qa["question"]
-                total_questions += 1
+            if context:
+                context_str = context["resource"]
 
-                # Query the search endpoint
-                params = {
-                    'query': question,
-                    'k': k 
-                }
-                response = requests.get(endpoint_url, params=params)
-                search_results = response.json()
+                for qa in questions_and_answers:
+                    if isinstance(qa, dict) and "question" in qa:
+                        if response_id % 100 == 0:
+                            print(f"Response # {response_id}")
 
-                for i, result in enumerate(search_results):
-                    if context_str in result["content"]:
-                        total_contexts_found += 1
-                        position_sum += i + 1  # Found at position i+1 (1-indexed)
-                        break
-                    
+                        question = qa["question"]
+                        total_questions += 1
+
+                        # Query the search endpoint
+                        params = {
+                            'query': question,
+                            'k': k
+                        }
+                        response = requests.get(endpoint_url, params=params)
+                        search_results = response.json()
+
+                        # Calculate metrics for each question
+                        found = False
+                        rank = 0
+
+                        for i, result in enumerate(search_results):
+                            if context_str in result["content"]:
+                                if not found:
+                                    total_contexts_found += 1
+                                    rank = i + 1
+                                    reciprocal_rank_sum += 1 / rank
+                                    found = True
+
+                                break  # Stop after finding the first relevant document
+
+                        if found:
+                            position_sum += rank
+                            precision_sum += 1 / len(search_results)
+                            recall_sum += 1  # Since there's only one relevant document
+
+    # Calculate final metrics
     retrieval_accuracy = total_contexts_found / total_questions if total_questions > 0 else 0
-    average_position = position_sum / total_questions if total_questions > 0 else 0
-                    
-    return retrieval_accuracy, average_position
+    average_position = position_sum / total_contexts_found if total_questions > 0 else 0
+    mrr = reciprocal_rank_sum / total_questions if total_questions > 0 else 0
+    average_precision = precision_sum / total_questions if total_questions > 0 else 0
+    average_recall = recall_sum / total_questions if total_questions > 0 else 0
+
+    return {
+        "retrieval_accuracy": retrieval_accuracy,
+        "average_position": average_position,
+        "mrr": mrr,
+        "average_precision": average_precision,
+        "average_recall": average_recall,
+        "total_questions": total_questions,
+        "total_openai_json_errors": openai_json_error,
+        "total_contexts_found": total_contexts_found,
+        "position_sum": position_sum
+    }
 
 
 if __name__ == "__main__":
@@ -63,15 +114,15 @@ if __name__ == "__main__":
                         help='The URL with the endpoint to query for search results.')
 
     args = parser.parse_args()
-    
+
     experiment_iteration = args.experiment_iteration
     num_sampled_questions = args.num_sampled_questions
     endpoint_url = args.endpoint_url
-    
+
     # Initialize clearml task and endpoint URL
     task = Task.init(project_name="Fasten",
                      task_name=f"Retrieval evaluation {experiment_iteration}")
-    
+
     # Load JSON data
     with open('../data/json_sample_parsed.json', 'r') as f:
         parsed_data = json.load(f)
@@ -91,17 +142,12 @@ if __name__ == "__main__":
     k = 5
 
     # Evaluate metrics
-    retrieval_accuracy, average_position = calculate_retrieval_metrics(num_sampled_questions, 
-                                                                       endpoint_url)
-    
-    metrics = {
-        "Retrieval Accuracy": retrieval_accuracy,
-        "Average Position": average_position,
-        "Total contexts found": total_contexts_found,
-        "Total questions": total_questions,
-        "Total contexts": total_contexts
-    }
-    
+    metrics = calculate_retrieval_metrics(openai_responses,
+                                          num_sampled_questions,
+                                          endpoint_url)
+
+    metrics["Total contexts"] = total_contexts
+
     for series_name, value in metrics.items():
         task.get_logger().report_scalar(
             title="Retrieval Evaluation metric",
@@ -109,6 +155,5 @@ if __name__ == "__main__":
             value=value,
             iteration=0
         )
-    
-    task.close()
 
+    task.close()
