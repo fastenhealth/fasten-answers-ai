@@ -1,8 +1,8 @@
 Total bundle entries: 319
-Mean chars per resource text: 2622.87
-Total chunks: 2001
-Total input tokens: 760358
-Total openai queries: 2000
-Total aproximate costs: 0.24
-Total aproximate input costs: 0.057
-Total aproximate output costs: 0.18
+Mean chars per resource text: 2509.91
+Total chunks: 1916
+Total input tokens: 717004
+Total openai queries: 1915
+Total aproximate costs: 0.23
+Total aproximate input costs: 0.054
+Total aproximate output costs: 0.172

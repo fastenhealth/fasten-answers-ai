@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+from llama_index.vector_stores.elasticsearch import ElasticsearchStore
 
 from .settings import settings, logger
 
@@ -9,7 +10,7 @@ def get_es_client():
         basic_auth=(settings.es_user, settings.es_password),
         max_retries=10,
     )
-    
+
 
 def get_mapping():
     return {
@@ -28,7 +29,7 @@ def get_mapping():
             }
         }
     }
-    
+
 
 def create_index_if_not_exists(index_name):
     es_client = get_es_client()

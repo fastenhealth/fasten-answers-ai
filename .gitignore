@@ -10,6 +10,7 @@ __pycache__/
 .Python
 env/
 venv/
+venv-dev/
 ENV/
 env.bak/
 venv.bak/
@@ -115,9 +116,10 @@ dmypy.json
 .idea/
 *.sublime-project
 *.sublime-workspace
-
+scripts/rag_evaluation/data/flat_files/
 # data
 */data
+
 *.json
 *.jsonl
 /models
