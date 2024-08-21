@@ -15,7 +15,7 @@ class LlamaCppClient:
 
         if params is None:
             params = {
-                "n_predict": 400,
+                "n_predict": 300,
                 "temperature": 0.8,
                 "stop": ["<|eot_id|>"],
                 "repeat_last_n": 64,

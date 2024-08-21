@@ -1,0 +1,11 @@
+Total bundle entries: 319
+Mean chars per entry text: 2160.846394984326
+Total chunks: 1413
+Mean tokens per chunk: 147.72894550601558
+Mean chars per chunk: 456.9115357395612
+Total input tokens: 268567
+Total output tokens approximate: 95400
+Total openai queries: 318
+Total aproximate costs: 0.05
+Total aproximate input costs: 0.02
+Total aproximate output costs: 0.029

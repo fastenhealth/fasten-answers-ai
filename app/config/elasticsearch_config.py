@@ -1,5 +1,4 @@
 from elasticsearch import Elasticsearch
-from llama_index.vector_stores.elasticsearch import ElasticsearchStore
 
 from .settings import settings, logger
 

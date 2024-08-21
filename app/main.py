@@ -25,16 +25,6 @@ embedding_model = get_sentence_transformer()
 es_client = create_index_if_not_exists(settings.index_name)
 
 
-@app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    file_path = os.path.join(settings.upload_dir, file.filename)
-    with open(file_path, "wb") as buffer:
-        buffer.write(await file.read())
-    index_pdf(file_path, embedding_model, es_client)
-    logger.info(f"File uploaded: {file.filename}")
-    return {"filename": file.filename}
-
-
 @app.post("/bulk_load")
 async def bulk_load(file: UploadFile = File(...)):
     data = await file.read()
@@ -71,9 +61,11 @@ async def delete_all_documents(index_name: str):
 
 
 @app.get("/search")
-async def search_documents(query: str, k: int = 5, threshold: float = 0):
+async def search_documents(query: str, k: int = 5, threshold: float = 0,
+                           text_boost: float = 1.0, embedding_boost: float = 1.0):
     results = search_query(query, embedding_model, es_client, k=k,
-                           threshold=threshold)
+                           threshold=threshold, text_boost=text_boost,
+                           embedding_boost=embedding_boost)
     return results
 
 

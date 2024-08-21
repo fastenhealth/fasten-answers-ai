@@ -15,9 +15,10 @@ def bulk_load_from_json_flattened_file(data: dict,
     """
     Function to load in bulk mode a FHIR JSON flattened file
     """
-    for _, value in data.items():
-        file_name = value.get("file_name")
-        text_chunk = value.get("text_chunk")
+    data = data["entry"]
+    for value in data:
+        resource_id = value.get("resource_id")
+        text_chunk = value.get("resource")
         embedding = embedding_model.encode(text_chunk)
         yield {
             "_index": index_name,
@@ -25,7 +26,7 @@ def bulk_load_from_json_flattened_file(data: dict,
                 "content": text_chunk,
                 "embedding": embedding,
                 "metadata": {
-                    "file_name": file_name
+                    "resource_id": resource_id
                 }
             }
         }

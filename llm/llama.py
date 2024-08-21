@@ -38,9 +38,6 @@ class LlamaCppClient:
                 "stream": True
             }
 
-        
-
-        # Construir el prompt con la historia de la conversación
         prompt = ("<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
                   f"{self.llama_prompt}<|eot_id|>\n"
                   f"<|start_header_id|>user<|end_header_id|>\n\n"
