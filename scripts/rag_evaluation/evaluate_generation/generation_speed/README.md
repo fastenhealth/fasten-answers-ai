@@ -86,6 +86,8 @@ docker run --rm -p 8090:9090 -v $(pwd)/models:/models ghcr.io/ggerganov/llama.cp
 
 ## 6. Running the Main Script
 
+Before running the code, make sure you added your huggingface token in your `.env` file.
+
 Once the container is running and `input.json` is configured, you can run the `main.py` script:
 
 ```bash

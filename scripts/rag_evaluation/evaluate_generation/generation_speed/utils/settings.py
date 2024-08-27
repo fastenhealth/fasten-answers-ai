@@ -1,6 +1,10 @@
+from dotenv import load_dotenv
 import os
 
 from transformers import AutoTokenizer
+
+
+load_dotenv()
 
 
 SYSTEM_PROMPT = ("A chat between a curious user and an intelligent, "
