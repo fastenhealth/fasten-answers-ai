@@ -1,0 +1,8 @@
+{
+    "host": "http://localhost:8090",
+    "model": "microsoft/Phi-3.5-mini-instruct",
+    "output_file": "Phi-3.5-mini-instruct-F16.csv",
+    "total_cores": 10,
+    "temperature": 0.8,
+    "tokens_to_predict": 200
+}

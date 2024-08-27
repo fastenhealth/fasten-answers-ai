@@ -117,10 +117,10 @@ dmypy.json
 *.sublime-project
 *.sublime-workspace
 scripts/rag_evaluation/data/flat_files/
+
 # data
 */data
-
-*.json
+scripts/rag_evaluation/evaluate_generation/generation_speed/data/*.csv
 *.jsonl
 /models
 data/

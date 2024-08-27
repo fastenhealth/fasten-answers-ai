@@ -6,23 +6,44 @@ from transformers import AutoTokenizer
 SYSTEM_PROMPT = ("A chat between a curious user and an intelligent, "
                  "polite medical assistant. The assistant provides detailed, "
                  "helpful answers to the user's medical questions, "
-                 "including accurate references where applicable.")
+                 "including accurate references where applicable. "
+                 "The user will give you context and then his/her "
+                 "question will come in."
+                 )
 
-LLAMA3_1_PROMPT = (
+LLAMA3_PROMPT = (
     "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
     "{system_prompt}<|eot_id|>\n"
     "<|start_header_id|>user<|end_header_id|>\n\n"
-    "{user_prompt}<|eot_id|>\n"
+    "Context information is below.\n "
+    "---------------------\n "
+    "{user_prompt}\n"
+    "---------------------\n "
+    "Given the context information (if there is any), "
+    "this is my message: "
+    "{question}<|eot_id|>\n"
     "<|start_header_id|>assistant<|end_header_id|>"
 )
 
+PHI_3_5_PROMPT = (
+    "<|system|>"
+    "{system_prompt}<|end|>"
+    "<|user|>"
+    "Context information is below.\n "
+    "---------------------\n "
+    "{user_prompt}\n"
+    "---------------------\n "
+    "{question}"
+    "<|end|>"
+    "<|assistant|>"
+)
 
 # Base template
 BASE_TEMPLATE = (
     "Patient is a {age}-year-old {gender} with a history of {conditions}. "
-    "They are currently experiencing {symptoms} and are taking {medications}. "
-    "Additional information: {extra_info} "
-    "Patient's question: {user_question}"
+    "The patient is currently experiencing {symptoms} and is taking {medications}. "
+    "Additional information: {extra_info} \n"
+    "{user_question}"
 )
 
 # Templates
@@ -42,22 +63,22 @@ EXTRA_INFO_LIST = [
     "The patient has been advised to monitor their blood pressure daily.",
     "Recent imaging studies indicate no acute changes.",
     "The patient has been vaccinated for seasonal influenza.",
-    "They reported a recent increase in physical activity.",
+    "The patient reported a recent increase in physical activity.",
     "Current lifestyle includes smoking cessation and reduced alcohol intake.",
     "Previous surgical history includes appendectomy at age 25.",
     "The patient has mild allergic reactions to certain antibiotics.",
-    "They have been on a gluten-free diet for the past year.",
+    "The patient have been on a gluten-free diet for the past year.",
     "The patient's occupation involves moderate physical labor.",
     "Recent laboratory tests revealed elevated cholesterol levels.",
-    "They have regular appointments with a nutritionist.",
+    "The patient have regular appointments with a nutritionist.",
     "The patient is participating in a clinical trial for new medication.",
-    "Their sleep patterns have improved with recent lifestyle changes.",
-    "They have joined a support group for chronic pain management.",
+    "The patient sleep patterns have improved with recent lifestyle changes.",
+    "The patient have joined a support group for chronic pain management.",
     "The patient uses a home blood pressure monitor to track readings.",
-    "They have expressed interest in alternative therapies.",
-    "Their exercise regimen includes daily walking and stretching exercises.",
+    "The patient have expressed interest in alternative therapies.",
+    "The patient exercise regimen includes daily walking and stretching exercises.",
     "The patient has reported improved mental health with therapy.",
-    "They are managing stress with mindfulness and meditation practices.",
+    "The patient is managing stress with mindfulness and meditation practices.",
     "The patient has completed a course on diabetes self-management.",
 ]
 
@@ -76,9 +97,14 @@ USER_QUESTIONS = [
 ]
 
 
-TOKENIZER = {"meta-llama/Meta-Llama-3.1-8B":
-             AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B",
-                                           token=os.getenv("HUGGING_FACE_ACCESS_TOKEN")),
-             "microsoft/Phi-3.5-mini-instruct":
-             AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct", trust_remote_code=True)
-             }
+MODEL_SETTINGS = {"meta-llama/Meta-Llama-3.1-8B-Instruct":
+                  {"tokenizer": AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B",
+                                                              token=os.getenv("HUGGING_FACE_ACCESS_TOKEN")),
+                   "model_prompt": LLAMA3_PROMPT
+                   },
+                  "microsoft/Phi-3.5-mini-instruct":
+                  {"tokenizer": AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct",
+                                                              trust_remote_code=True),
+                      "model_prompt": PHI_3_5_PROMPT
+                   }
+                  }

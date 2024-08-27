@@ -1,53 +1,18 @@
-from fastapi import FastAPI
-
-from fastapi.responses import StreamingResponse
-
-from utils.llm import LlamaCppClient
-from utils.settings import LLAMA3_1_PROMPT, SYSTEM_PROMPT
+from utils.parameters import load_params
+from utils.llm_client import configure_llm_client
+from utils.generator import generate_responses
+from utils.contexts_and_questions import create_contexts_and_questions_if_not_exist
 
 
-import pdb
+def main():
+    params = load_params("./data/input.json")
 
-settings = {
-    "host": "http://localhost:8080",
-    "model_prompt": LLAMA3_1_PROMPT,
-    "system_prompt": SYSTEM_PROMPT,
-    "n_predict": 400,
-    "temperature": 0.8,
-    "stop": ["<|eot_id|>"],
-    "stream": False
-}
+    llm_client = configure_llm_client(params)
 
-llm_client = LlamaCppClient(settings)
+    contexts, questions = create_contexts_and_questions_if_not_exist(llm_client.tokenizer)
+
+    generate_responses(params, contexts, questions, llm_client)
 
 
-while True:
-    user_prompt = input("Enter prompt: ")
-    response = llm_client.chat(user_prompt=user_prompt)
-    pdb.set_trace()
-
-# app = FastAPI()
-
-# def stream_llm_response(query):
-
-#     def generate():
-#         for chunk in llm_client.chat(query):
-#             yield chunk
-
-#     return StreamingResponse(generate(), media_type="text/plain")
-
-
-# @app.get("/generate")
-# async def answer_query(query: str, k: int = 5, threshold: float = 0):
-
-
-#     return stream_llm_response(query)
-
-
-# Todo:
-
-"""
-- configurar pruebas para que reciban los distintos prompts
-- tomar los resultados de response.json() de tokens por segundo y todo eso
-- Porbar con3 modelos cuantizados
-"""
+if __name__ == '__main__':
+    main()
