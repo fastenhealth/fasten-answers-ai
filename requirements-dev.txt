@@ -1,0 +1,4 @@
+clearml==1.16.4
+pandas==2.2.2
+requests==2.32.3
+ruff==0.6.3

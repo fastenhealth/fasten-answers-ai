@@ -5,65 +5,74 @@ from ..config.settings import settings, logger
 
 
 class LlamaCppClient:
-    def __init__(self, base_url=settings.llama_host):
-        self.base_url = base_url
-        self.system_prompt = settings.llama_prompt
-        self.conversation_history = []
+    DEFAULT_PARAMS = {
+        "n_predict": 200,
+        "temperature": 0.0,
+        "stop": ["<|end|>"],
+        "repeat_last_n": 64,
+        "repeat_penalty": 1.18,
+        "top_k": 40,
+        "top_p": 0.95,
+        "min_p": 0.05,
+        "tfs_z": 1.0,
+        "typical_p": 1.0,
+        "presence_penalty": 0.0,
+        "frequency_penalty": 0.0,
+        "mirostat": 0,
+        "mirostat_tau": 5.0,
+        "mirostat_eta": 0.1,
+        "stream": False
+    }
 
-    def chat(self, message, context, params=None):
-        self.conversation_history.append(f"User: {message}")
+    def __init__(self):
+        self.base_url = settings.host
+        self.system_prompt = settings.system_prompt
+        self.prompt = settings.model_prompt
 
-        if params is None:
-            params = {
-                "n_predict": 400,
-                "temperature": 0.7,
-                "stop": ["</s>", "User:", "Assistant:"],
-                "repeat_last_n": 256,
-                "repeat_penalty": 1.18,
-                "top_k": 40,
-                "top_p": 0.95,
-                "min_p": 0.05,
-                "tfs_z": 1.0,
-                "typical_p": 1.0,
-                "presence_penalty": 0.0,
-                "frequency_penalty": 0.0,
-                "mirostat": 0,
-                "mirostat_tau": 5.0,
-                "mirostat_eta": 0.1,
-                "stream": True
-            }
+    def chat(self, context, message, stream, params=None):
+        params = params or self.DEFAULT_PARAMS.copy()
+        params["stream"] = stream
 
-        prompt = f"{self.system_prompt}\n\n \
-            Context: {context}\n\n" + "\n".join(self.conversation_history) + "\nAssistant:"
+        prompt = self.prompt.format(
+            system_prompt=self.system_prompt,
+            context=context,
+            message=message
+        )
 
         data = {
             "prompt": prompt,
             **params
         }
 
-        logger.info(f"Sending request to Llama server with prompt: {prompt}")
+        logger.info(f"Sending request to llama.cpp server with prompt: {prompt}")
 
-        response = requests.post(f"{self.base_url}/completion",
-                                 json=data, stream=True)
+        try:
+            if params["stream"]:
+                return self._stream_response(data)
+            else:
+                return self._get_response(data)
+        except requests.RequestException as e:
+            logger.error(f"Request failed: {e}")
+            raise
 
-        if response.status_code == 200:
-            full_content = ""
-            for line in response.iter_lines():
-                if line:
-                    decoded_line = line.decode('utf-8')
-                    if decoded_line.startswith('data: '):
-                        content = json.loads(decoded_line[6:])
-                        if content['stop']:
-                            break
-                        chunk = content['content']
-                        full_content += chunk
-                        yield chunk
+    def _stream_response(self, data):
+        response = requests.post(f"{self.base_url}/completion", json=data, stream=True)
+        response.raise_for_status()
 
-            # Update conversation_history with the full response
-            self.conversation_history.append(f"Assistant: {full_content.strip()}")
-        else:
-            logger.error(f"Error: {response.status_code}, {response.text}")
-            raise Exception(f"Error: {response.status_code}, {response.text}")
+        for line in response.iter_lines():
+            if line:
+                decoded_line = line.decode('utf-8')
+                if decoded_line.startswith('data: '):
+                    content = json.loads(decoded_line[6:])
+                    if content.get('stop'):
+                        break
+                    chunk = content.get('content', '')
+                    yield chunk
+
+    def _get_response(self, data):
+        response = requests.post(f"{self.base_url}/completion", json=data)
+        response.raise_for_status()
+        return response.json()
 
 
 llm_client = LlamaCppClient()

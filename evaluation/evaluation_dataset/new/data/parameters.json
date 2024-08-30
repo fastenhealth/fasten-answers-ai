@@ -1,0 +1,13 @@
+{   
+    "chunks": {
+        "chunk_size": 500,
+        "chunk_overlap": 50
+    },
+    "data": {
+        "fhir_raw_file": "./data/Abraham100_Oberbrunner298_9dbb826d-0be6-e8f9-3254-dbac25d83be6.json",
+        "flat_files_folder_path": "../data/flat_files",
+        "fhir_chunks": "./data/FHIR_chunks.json",
+        "fhir_metrics_summary_report": "./data/FHIR_report.txt",
+        "openai_batch_requests_file": "./data/openai_requests.jsonl"
+    }
+}

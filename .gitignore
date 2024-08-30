@@ -10,6 +10,7 @@ __pycache__/
 .Python
 env/
 venv/
+venv-dev/
 ENV/
 env.bak/
 venv.bak/
@@ -115,3 +116,15 @@ dmypy.json
 .idea/
 *.sublime-project
 *.sublime-workspace
+scripts/rag_evaluation/data/flat_files/
+
+# data
+*/data
+scripts/rag_evaluation/evaluate_generation/generation_speed/data/*.csv
+scripts/rag_evaluation/evaluate_retrieval/data/output/*csv
+
+*.jsonl
+/models
+/data/
+!/evaluation/data/
+evaluation/evaluation_dataset
