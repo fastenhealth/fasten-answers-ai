@@ -6,13 +6,16 @@ from evaluation.core.rag_requests.batch_requests import batch_requests
 
 
 # Load config
-with open(os.path.join(os.path.dirname(__file__), "/data/generate_responses.json"), "r") as config_file:
+with open(os.path.join(os.path.dirname(__file__), "/data/input_generate_responses.json"), "r") as config_file:
     config = json.load(config_file)
 
-DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+DATA_DIR = os.path.abspath(os.path.join(
+    os.path.dirname(__file__), "..", "..", "data"))
 JSONL_FILE = os.path.join(DATA_DIR, "openai_outputs", config["JSONL_FILE"])
-JSONL_OUTPUT_CSV = os.path.join(DATA_DIR, "openai_outputs", config["JSONL_FILE"].replace(".jsonl", ".csv"))
-RAG_OUTPUT_CSV = os.path.join(DATA_DIR, "rag_generation", config["RAG_OUTPUT_CSV"])
+JSONL_OUTPUT_CSV = os.path.join(
+    DATA_DIR, "openai_outputs", config["JSONL_FILE"].replace(".jsonl", ".csv"))
+RAG_OUTPUT_CSV = os.path.join(
+    DATA_DIR, "rag_generation", config["RAG_OUTPUT_CSV"])
 
 SERVER_URL = config["SERVER_URL"]
 CORES = config["CORES"]

@@ -4,6 +4,8 @@
 https://docs.llamaindex.ai/en/stable/examples/low_level/evaluation/#evaluating-generation
 """
 
+import csv
+import os
 import pandas as pd
 from evaluation.core.openai import get_chat_completion
 
@@ -66,9 +68,10 @@ ANSWER_JSON_SCHEMA = {
 
 
 class FaithfulnessEvaluator:
-    def __init__(self, openai_api_key, model="gpt-4o-2024-08-06"):
+    def __init__(self, openai_api_key, model="gpt-4o-2024-08-06", max_tokens=300):
         self.openai_api_key = openai_api_key
         self.model = model
+        self.max_tokens = max_tokens
 
     def run_faithfulness_eval(self, generated_answer: str, contexts: str):
         """
@@ -81,13 +84,16 @@ class FaithfulnessEvaluator:
         Returns:
         - dict, containing evaluations on relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
-        user_prompt = FAITHFULLNESS_USER_TMPL.format(generated_answer=generated_answer, contexts=contexts)
+        user_prompt = FAITHFULLNESS_USER_TMPL.format(
+            generated_answer=generated_answer, contexts=contexts)
         system_prompt = FAITHFULLNESS_SYS_TMPL
 
-        open_ai_response = get_chat_completion(self.openai_api_key, user_prompt, system_prompt, model=self.model)
+        open_ai_response = get_chat_completion(
+            self.openai_api_key, user_prompt, system_prompt, model=self.model, max_tokens=self.max_tokens)
         relevancy = 1 if open_ai_response["relevancy"] == "YES" else 0
         accuracy = 1 if open_ai_response["accuracy"] == "YES" else 0
-        conciseness_and_pertinence = 1 if open_ai_response["conciseness_and_pertinence"] == "YES" else 0
+        conciseness_and_pertinence = 1 if open_ai_response[
+            "conciseness_and_pertinence"] == "YES" else 0
         reasoning = open_ai_response["reasoning"]
 
         return {
@@ -97,25 +103,54 @@ class FaithfulnessEvaluator:
             "reasoning": reasoning,
         }
 
-    def run_batch_evaluation(self, df: pd.DataFrame):
+    def run_batch_evaluation(self, 
+                             df: pd.DataFrame,
+                             output_file: str,
+                             generated_answer_column: str,
+                             contexts_column: str):
         """
         Runs faithfulness evaluation on a batch of generated answers and contexts.
+        Saves results incrementally to avoid data loss in case of failure.
 
         Parameters:
         - df: pd.DataFrame, a dataframe with columns 'generated_answer' and 'contexts'.
+        - output_file: str, the path to the output CSV file where results will be saved.
 
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
-        results = []
-        for _, row in df.iterrows():
-            result = self.run_faithfulness_eval(row["generated_answer"], row["contexts"])
-            results.append(result)
+        # Determine if the file already exists
+        file_exists = os.path.isfile(output_file)
 
-        # Convert list of dicts to a DataFrame
-        results_df = pd.DataFrame(results)
+        with open(output_file, mode='a', newline='') as file:
+            writer = csv.DictWriter(file, fieldnames=[
+                                    'relevancy', 'accuracy', 'conciseness_and_pertinence', 'reasoning'])
 
-        # Concatenate the original dataframe with the results
-        df = pd.concat([df, results_df], axis=1)
+            # Write header only if the file does not exist
+            if not file_exists:
+                writer.writeheader()
 
-        return df
+            try:
+                for _, row in df.iterrows():
+                    result = self.run_faithfulness_eval(
+                        row[generated_answer_column], row[contexts_column])
+
+                    # Write the result to the CSV file
+                    writer.writerow(result)
+
+                    # Ensure the data is written to disk
+                    file.flush()
+
+            except Exception as e:
+                print(f"Error encountered: {e}. Saving progress and exiting.")
+                raise
+
+        # Load the results back into a DataFrame and concatenate with the original
+        results_df = pd.read_csv(output_file)
+        
+        total_questions = len(results_df)
+        faithfulness_relevancy = results_df["relevancy"].sum() / total_questions
+        faithfulness_accuracy = results_df["accuracy"].sum() / total_questions
+        faithfulness_conciseness_and_pertinence = results_df["conciseness_and_pertinence"].sum() / total_questions
+ 
+        return faithfulness_relevancy, faithfulness_accuracy, faithfulness_conciseness_and_pertinence
