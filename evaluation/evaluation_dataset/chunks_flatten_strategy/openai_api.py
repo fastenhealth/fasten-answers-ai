@@ -6,8 +6,7 @@ from typing import List
 import openai
 
 from create_chunks import get_total_tokens_from_string
-from settings import QUESTION_GEN_SYS_TMPL, QUESTION_GEN_USER_TMPL, \
-    OPENAI_MODEL, MAX_TOKENS, logger
+from settings import QUESTION_GEN_SYS_TMPL, QUESTION_GEN_USER_TMPL, OPENAI_MODEL, MAX_TOKENS, logger
 
 
 def generate_qa_file_batch_api(
@@ -17,7 +16,7 @@ def generate_qa_file_batch_api(
     max_tokens=MAX_TOKENS,
     num_questions_per_chunk: int = 1,
     output_file: str = "qa_file.jsonl",
-    tokens_limit: int = 10000
+    tokens_limit: int = 10000,
 ) -> None:
     """Generate questions and save to a .jsonl file."""
     results = []
@@ -25,15 +24,12 @@ def generate_qa_file_batch_api(
 
     method = "POST"
     url = "/v1/chat/completions"
-    system_prompt = system_prompt.format(
-        num_questions_per_chunk=num_questions_per_chunk)
+    system_prompt = system_prompt.format(num_questions_per_chunk=num_questions_per_chunk)
 
     tokens_system_prompt = get_total_tokens_from_string(system_prompt)
 
     for key, value in resources.items():
-        user_prompt_formatted = user_prompt.format(
-            context_str=value.get("text_chunk")
-        )
+        user_prompt_formatted = user_prompt.format(context_str=value.get("text_chunk"))
         tokens_user_prompt = get_total_tokens_from_string(user_prompt_formatted)
 
         if tokens_system_prompt + tokens_user_prompt < tokens_limit:
@@ -45,10 +41,10 @@ def generate_qa_file_batch_api(
                     "model": OPENAI_MODEL,
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt_formatted}
+                        {"role": "user", "content": user_prompt_formatted},
                     ],
-                    "max_tokens": max_tokens
-                }
+                    "max_tokens": max_tokens,
+                },
             }
             results.append(input_object)
             total_tokens.append(tokens_user_prompt)
@@ -57,9 +53,9 @@ def generate_qa_file_batch_api(
     total_tokens.append(total_system_tokens)
 
     # Save to .jsonl file
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         for item in results:
-            f.write(json.dumps(item) + '\n')
+            f.write(json.dumps(item) + "\n")
 
     total_input_tokens = np.sum(total_tokens)
     total_openai_queries = len(results)
@@ -67,18 +63,12 @@ def generate_qa_file_batch_api(
     return total_input_tokens, total_openai_queries
 
 
-def openai_create_completion(system_prompt,
-                             user_prompt,
-                             max_tokens=MAX_TOKENS,
-                             OpenAI_model=OPENAI_MODEL):
+def openai_create_completion(system_prompt, user_prompt, max_tokens=MAX_TOKENS, OpenAI_model=OPENAI_MODEL):
     try:
         response = openai.chat.completions.create(
             model=OpenAI_model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            max_tokens=max_tokens
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            max_tokens=max_tokens,
         )
         return response
     except HTTPError as http_err:
@@ -93,7 +83,7 @@ def aprox_costs(
     total_openai_queries: int,
     cost_per_million_input: float = 0.075,
     cost_per_million_output: float = 0.3,
-    tokens_generated: int = 300
+    tokens_generated: int = 300,
 ) -> None:
     """Generate aprox costs of using Batch API"""
 

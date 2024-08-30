@@ -14,7 +14,7 @@ def configure_llm_client(params: dict) -> LlamaCppClient:
         "n_predict": params.get("tokens_to_predict", 400),
         "temperature": params.get("temperature", 0.8),
         "stop": ["<|eot_id|>"],
-        "stream": False
+        "stream": False,
     }
 
     return LlamaCppClient(settings)

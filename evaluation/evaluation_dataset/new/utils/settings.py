@@ -72,10 +72,9 @@ QUESTION_GEN_USER_TMPL = (
     "Based solely on the provided context information, without relying on prior knowledge, "
     "generate a JSON object containing keys and values for relevant questions and answers. "
     "Ensure that your response strictly follows this format: "
-    "{{\"questions_and_answers\": ["
-    "{{\"question\": \"example question\", \"answer\": \"example answer\"}}"
+    '{{"questions_and_answers": ['
+    '{{"question": "example question", "answer": "example answer"}}'
     "]}}."
     " If the context does not provide enough information to generate any questions and answers, "
     "do not generate any output."
 )
-

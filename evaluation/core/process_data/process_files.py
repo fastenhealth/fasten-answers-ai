@@ -2,13 +2,12 @@ import json
 import pandas as pd
 
 
-def jsonl_dataset_to_dataframe(jsonl_file,
-                               output_csv) -> pd.DataFrame:
+def jsonl_dataset_to_dataframe(jsonl_file, output_csv) -> pd.DataFrame:
     """
     Read evaluation dataset in JSONL format from Openai
     """
     openai_responses = []
-    with open(jsonl_file, 'r') as f:
+    with open(jsonl_file, "r") as f:
         for line in f:
             openai_responses.append(json.loads(line))
 
@@ -23,11 +22,10 @@ def jsonl_dataset_to_dataframe(jsonl_file,
             question = questions_and_answers["question"]
             reference_answer = questions_and_answers["answer"]
         except json.JSONDecodeError as e:
+            print(e)
             continue
 
-        result = {"resource_id_source": resource_id,
-                  "openai_query": question,
-                  "openai_answer": reference_answer}
+        result = {"resource_id_source": resource_id, "openai_query": question, "openai_answer": reference_answer}
         results.append(result)
 
     data = pd.DataFrame(results)

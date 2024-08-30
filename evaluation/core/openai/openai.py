@@ -1,13 +1,14 @@
 import requests
 
 
-def get_chat_completion(openai_api_key,
-                        user_prompt: str,
-                        system_prompt: str,
-                        answer_json_schema: dict,
-                        model: str,
-                        endpoint_url: str = "https://api.openai.com/v1/chat/completions",
-                        ):
+def get_chat_completion(
+    openai_api_key,
+    user_prompt: str,
+    system_prompt: str,
+    answer_json_schema: dict,
+    model: str,
+    endpoint_url: str = "https://api.openai.com/v1/chat/completions",
+):
     """
     Function to get a chat completion from OpenAI's API using a specific system prompt and JSON schema.
 
@@ -21,24 +22,16 @@ def get_chat_completion(openai_api_key,
     - dict, the response from the OpenAI API.
     """
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {openai_api_key}"
-    }
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {openai_api_key}"}
 
     payload = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "response_format": answer_json_schema
+        "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+        "response_format": answer_json_schema,
     }
 
     try:
-        response = requests.post(endpoint_url,
-                                 headers=headers,
-                                 json=payload)
+        response = requests.post(endpoint_url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as http_err:

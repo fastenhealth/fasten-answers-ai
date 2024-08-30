@@ -18,20 +18,12 @@ class LlamaCppClient:
             "temperature": self.temperature,
             "stop": self.stop,
             "stream": self.stream,
-            "cache_prompt": False
+            "cache_prompt": False,
         }
 
-        model_prompt = self.model_prompt.format(
-            system_prompt=self.system_prompt,
-            user_prompt=user_prompt,
-            question=question
-        )
+        model_prompt = self.model_prompt.format(system_prompt=self.system_prompt, user_prompt=user_prompt, question=question)
 
-        data = {
-            "prompt": model_prompt,
-            **params
-        }
+        data = {"prompt": model_prompt, **params}
 
-        response = requests.post(f"{self.base_url}/completion",
-                                 json=data)
+        response = requests.post(f"{self.base_url}/completion", json=data)
         return response

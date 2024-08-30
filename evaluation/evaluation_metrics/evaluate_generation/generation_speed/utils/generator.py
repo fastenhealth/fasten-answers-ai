@@ -5,11 +5,27 @@ from tqdm import tqdm
 def generate_responses(params, contexts, questions, llm_client):
     output_file_name = params["output_file"]
 
-    with open(f'./data/{output_file_name}', 'w', newline='') as output_file:
-        fieldnames = ["model", "context_size", "total_cores", "prompt", "question",
-                      "response", "temperature", "n_predict", "tokens_predicted", "tokens_evaluated",
-                      "prompt_n", "prompt_ms", "prompt_per_token_ms", "prompt_per_second",
-                      "predicted_n", "predicted_ms", "predicted_per_token_ms", "predicted_per_second"]
+    with open(f"./data/{output_file_name}", "w", newline="") as output_file:
+        fieldnames = [
+            "model",
+            "context_size",
+            "total_cores",
+            "prompt",
+            "question",
+            "response",
+            "temperature",
+            "n_predict",
+            "tokens_predicted",
+            "tokens_evaluated",
+            "prompt_n",
+            "prompt_ms",
+            "prompt_per_token_ms",
+            "prompt_per_second",
+            "predicted_n",
+            "predicted_ms",
+            "predicted_per_token_ms",
+            "predicted_per_second",
+        ]
 
         dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
         dict_writer.writeheader()

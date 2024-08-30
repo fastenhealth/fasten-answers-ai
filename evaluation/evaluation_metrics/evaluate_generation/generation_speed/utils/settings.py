@@ -7,13 +7,14 @@ from transformers import AutoTokenizer
 load_dotenv()
 
 
-SYSTEM_PROMPT = ("A chat between a curious user and an intelligent, "
-                 "polite medical assistant. The assistant provides detailed, "
-                 "helpful answers to the user's medical questions, "
-                 "including accurate references where applicable. "
-                 "The user will give you context and then his/her "
-                 "question will come in."
-                 )
+SYSTEM_PROMPT = (
+    "A chat between a curious user and an intelligent, "
+    "polite medical assistant. The assistant provides detailed, "
+    "helpful answers to the user's medical questions, "
+    "including accurate references where applicable. "
+    "The user will give you context and then his/her "
+    "question will come in."
+)
 
 LLAMA3_PROMPT = (
     "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
@@ -57,7 +58,7 @@ TEMPLATES = {
     "genders": ["male", "female", "non-binary"],
     "conditions_list": ["hypertension", "diabetes", "asthma", "chronic kidney disease", "arthritis"],
     "symptoms_list": ["chest pain", "shortness of breath", "headache", "dizziness", "fatigue"],
-    "medications_list": ["lisinopril", "metformin", "albuterol", "hydrochlorothiazide", "ibuprofen"]
+    "medications_list": ["lisinopril", "metformin", "albuterol", "hydrochlorothiazide", "ibuprofen"],
 }
 # Extra information
 EXTRA_INFO_LIST = [
@@ -103,14 +104,13 @@ USER_QUESTIONS = [
 ]
 
 
-MODEL_SETTINGS = {"meta-llama/Meta-Llama-3.1-8B-Instruct":
-                  {"tokenizer": AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B",
-                                                              token=os.getenv("HUGGING_FACE_ACCESS_TOKEN")),
-                   "model_prompt": LLAMA3_PROMPT
-                   },
-                  "microsoft/Phi-3.5-mini-instruct":
-                  {"tokenizer": AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct",
-                                                              trust_remote_code=True),
-                      "model_prompt": PHI_3_5_PROMPT
-                   }
-                  }
+MODEL_SETTINGS = {
+    "meta-llama/Meta-Llama-3.1-8B-Instruct": {
+        "tokenizer": AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3.1-8B", token=os.getenv("HUGGING_FACE_ACCESS_TOKEN")),
+        "model_prompt": LLAMA3_PROMPT,
+    },
+    "microsoft/Phi-3.5-mini-instruct": {
+        "tokenizer": AutoTokenizer.from_pretrained("microsoft/Phi-3.5-mini-instruct", trust_remote_code=True),
+        "model_prompt": PHI_3_5_PROMPT,
+    },
+}

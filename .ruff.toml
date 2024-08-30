@@ -3,5 +3,5 @@
 line-length = 130
 indent-width = 4
 
-# Assume Python 3.10
-target-version = "py310"
+# Assume Python 3.9
+target-version = "py39"

@@ -16,31 +16,27 @@ text_splitter = RecursiveCharacterTextSplitter(
 )
 
 
-def get_total_tokens_from_string(string: str,
-                                 encoding=OPENAI_MODEL_EMBEDDING) -> int:
+def get_total_tokens_from_string(string: str, encoding=OPENAI_MODEL_EMBEDDING) -> int:
     """Returns the number of tokens in a text string."""
     return len(encoding.encode(string))
 
 
 def measure_tokens_lenghts(file_path, tokens_lengths):
     plt.figure(figsize=(12, 3))
-    plt.plot(tokens_lengths, marker='o')
+    plt.plot(tokens_lengths, marker="o")
     plt.title("Tokens lengths")
     plt.ylabel("# tokens")
     plt.savefig(file_path)
     plt.close()
 
 
-def create_chunks_from_text(text_files: List[str],
-                            flat_file_path,
-                            output_file: str,
-                            text_splitter=text_splitter):
+def create_chunks_from_text(text_files: List[str], flat_file_path, output_file: str, text_splitter=text_splitter):
     documents = {}
     tokens_list = []
     chunk_counter = 1
 
     for file in text_files:
-        with open(flat_file_path + "/" + file, 'r') as f:
+        with open(flat_file_path + "/" + file, "r") as f:
             full_flatten_text = f.read()
 
         chunks = text_splitter.split_text(full_flatten_text)

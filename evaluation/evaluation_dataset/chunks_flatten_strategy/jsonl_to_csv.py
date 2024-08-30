@@ -2,17 +2,17 @@ import json
 import csv
 import pdb
 
-input_file = '../data/batch_7epBZY34pTV6xtJyHjuo5guq_output.jsonl'
-output_file = '../data/openai_response.csv'
+input_file = "../data/batch_7epBZY34pTV6xtJyHjuo5guq_output.jsonl"
+output_file = "../data/openai_response.csv"
 
 
-with open(output_file, mode='w', newline='') as csvfile:
+with open(output_file, mode="w", newline="") as csvfile:
     csv_writer = csv.writer(csvfile)
-    csv_writer.writerow(['question', 'answer'])
+    csv_writer.writerow(["question", "answer"])
 
     openai_json_error = 0
 
-    with open(input_file, 'r') as jsonl_file:
+    with open(input_file, "r") as jsonl_file:
         for response_id, line in enumerate(jsonl_file):
             data = json.loads(line)
             content = data["response"]["body"]["choices"][0]["message"]["content"]

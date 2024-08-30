@@ -1,11 +1,12 @@
 """
 - Correctness evaluator: whether the generated answer matches that of the reference answer
 given the query (requires labels).
-- Assuming that the answer given by the LLM is correct (ex. openai model answer with context given), 
+- Assuming that the answer given by the LLM is correct (ex. openai model answer with context given),
 we compare the answer of our rag vs the answer of the evaluator.
 - This code is based on the Building Evaluation from Scratch example from llamaindex:
 https://docs.llamaindex.ai/en/stable/examples/low_level/evaluation/#evaluating-generation
 """
+
 import pandas as pd
 
 from evaluation.core.openai import get_chat_completion
@@ -48,19 +49,16 @@ CORRECTNESS_USER_TMPL = """
 
 ANSWER_JSON_SCHEMA = {
     "type": "json_schema",
-            "json_schema": {
-                "name": "correctness_evaluation_output",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "reasoning": {"type": "string"},
-                        "score": {"type": "number"}
-                    },
-                    "required": ["reasoning", "score"],
-                    "additionalProperties": False
-                },
-                "strict": True
-            }
+    "json_schema": {
+        "name": "correctness_evaluation_output",
+        "schema": {
+            "type": "object",
+            "properties": {"reasoning": {"type": "string"}, "score": {"type": "number"}},
+            "required": ["reasoning", "score"],
+            "additionalProperties": False,
+        },
+        "strict": True,
+    },
 }
 
 
@@ -73,44 +71,37 @@ class CorrectnessEvaluator:
     def run_correctness_eval(self, query_str: str, reference_answer: str, generated_answer: str):
         """
         Evaluates the correctness of a generated answer against a reference answer.
-        
+
         Parameters:
         - query_str: str, the query string.
         - reference_answer: str, the reference answer.
         - generated_answer: str, the generated answer.
-        
+
         Returns:
         - dict, containing whether the answer passes the threshold, the score, and reasoning.
         """
-        user_prompt = CORRECTNESS_USER_TMPL.format(query_str,
-                                                   reference_answer,
-                                                   generated_answer)
+        user_prompt = CORRECTNESS_USER_TMPL.format(query_str, reference_answer, generated_answer)
         system_prompt = CORRECTNESS_SYS_TMPL
 
-        open_ai_response = get_chat_completion(self.openai_api_key,
-                                               user_prompt,
-                                               system_prompt,
-                                               model=self.model)
+        open_ai_response = get_chat_completion(self.openai_api_key, user_prompt, system_prompt, model=self.model)
         score = open_ai_response["score"]
         reasoning = open_ai_response["reasoning"]
 
-        return {"passing": score >= self.threshold,
-                "score": score,
-                "reason": reasoning}
+        return {"passing": score >= self.threshold, "score": score, "reason": reasoning}
 
     def run_batch_evaluation(self, df: pd.DataFrame):
         """
         Runs correctness evaluation on a batch of queries, reference answers, and generated answers.
-        
+
         Parameters:
         - df: pd.DataFrame, a dataframe with columns 'query', 'reference_answer', and 'generated_answer'.
-        
+
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for score, reasoning, and passing status.
         """
         results = []
         for _, row in df.iterrows():
-            result = self.run_correctness_eval(row['query'], row['reference_answer'], row['generated_answer'])
+            result = self.run_correctness_eval(row["query"], row["reference_answer"], row["generated_answer"])
             results.append(result)
 
         # Convert list of dicts to a DataFrame

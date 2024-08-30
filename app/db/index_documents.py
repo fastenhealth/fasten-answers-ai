@@ -1,14 +1,3 @@
-import os
-import json
-
-import fitz
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from llama_index.core import Document
-from llama_index.core.node_parser import SentenceSplitter
-
-from ..config.settings import settings, logger
-
-
 def bulk_load_from_json_flattened_file(data: dict,
                                        embedding_model,
                                        index_name):

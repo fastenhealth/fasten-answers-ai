@@ -1,14 +1,13 @@
-import json
-
 from ..config.settings import settings, logger
-from ..config.profiling import profile
 
 
-@profile
-def search_query(query_text, embedding_model,
-                 es_client, index_name=settings.index_name,
-                 k=5, threshold=0.2,
-                 text_boost=1.0, embedding_boost=1.0):
+def search_query(query_text,
+                 embedding_model,
+                 es_client,
+                 index_name=settings.index_name,
+                 k=5,
+                 text_boost=0.25,
+                 embedding_boost=4.0):
     logger.info(f"Searching for query: {query_text}")
     query_embedding = embedding_model.encode(query_text).tolist()
     query_body = {
@@ -51,11 +50,8 @@ def search_query(query_text, embedding_model,
     }
     response = es_client.search(index=index_name, body=query_body)
     results = response['hits']['hits']
-    filtered_results = [result for result in results
-                        if result['_score'] >= threshold]
-    logger.info(f"Found {len(filtered_results)} \
-        results for query: {query_text}")
+    logger.info(f"Found {len(results)} results for the query: {query_text}")
     return [{"score": result['_score'],
              "content": str(result['_source']['content']),
              "metadata": result['_source'].get('metadata', {})}
-            for result in filtered_results]
+            for result in results]

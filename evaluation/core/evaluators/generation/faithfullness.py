@@ -4,7 +4,6 @@
 https://docs.llamaindex.ai/en/stable/examples/low_level/evaluation/#evaluating-generation
 """
 
-
 import pandas as pd
 from evaluation.core.openai import get_chat_completion
 
@@ -56,13 +55,13 @@ ANSWER_JSON_SCHEMA = {
                 "relevancy": {"type": "string"},
                 "accuracy": {"type": "string"},
                 "conciseness_and_pertinence": {"type": "string"},
-                "reasoning": {"type": "string"}
+                "reasoning": {"type": "string"},
             },
             "required": ["relevancy", "accuracy", "conciseness_and_pertinence", "reasoning"],
-            "additionalProperties": False
+            "additionalProperties": False,
         },
-        "strict": True
-    }
+        "strict": True,
+    },
 }
 
 
@@ -74,21 +73,18 @@ class FaithfulnessEvaluator:
     def run_faithfulness_eval(self, generated_answer: str, contexts: str):
         """
         Evaluates the faithfulness of a generated answer against provided contexts based on three aspects.
-        
+
         Parameters:
         - generated_answer: str, the generated answer.
         - contexts: str, the contexts that should support the answer.
-        
+
         Returns:
         - dict, containing evaluations on relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
         user_prompt = FAITHFULLNESS_USER_TMPL.format(generated_answer=generated_answer, contexts=contexts)
         system_prompt = FAITHFULLNESS_SYS_TMPL
 
-        open_ai_response = get_chat_completion(self.openai_api_key,
-                                               user_prompt,
-                                               system_prompt,
-                                               model=self.model)
+        open_ai_response = get_chat_completion(self.openai_api_key, user_prompt, system_prompt, model=self.model)
         relevancy = 1 if open_ai_response["relevancy"] == "YES" else 0
         accuracy = 1 if open_ai_response["accuracy"] == "YES" else 0
         conciseness_and_pertinence = 1 if open_ai_response["conciseness_and_pertinence"] == "YES" else 0
@@ -98,22 +94,22 @@ class FaithfulnessEvaluator:
             "relevancy": relevancy,
             "accuracy": accuracy,
             "conciseness_and_pertinence": conciseness_and_pertinence,
-            "reasoning": reasoning
+            "reasoning": reasoning,
         }
 
     def run_batch_evaluation(self, df: pd.DataFrame):
         """
         Runs faithfulness evaluation on a batch of generated answers and contexts.
-        
+
         Parameters:
         - df: pd.DataFrame, a dataframe with columns 'generated_answer' and 'contexts'.
-        
+
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
         results = []
         for _, row in df.iterrows():
-            result = self.run_faithfulness_eval(row['generated_answer'], row['contexts'])
+            result = self.run_faithfulness_eval(row["generated_answer"], row["contexts"])
             results.append(result)
 
         # Convert list of dicts to a DataFrame

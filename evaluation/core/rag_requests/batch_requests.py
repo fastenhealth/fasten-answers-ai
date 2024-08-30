@@ -2,18 +2,19 @@ import csv
 import pandas as pd
 
 from evaluation.core.rag_requests.rag_client import query_rag_server
-import pdb
 
 
-def batch_requests(server_url: str,
-                   input_file: pd.DataFrame,
-                   question_column: str,
-                   output_file: str,
-                   optional_fields: list[str] = None,
-                   extra_parameters: dict = None,
-                   text_boost: float = 1.0,
-                   embedding_boost: float = 1.0):
-    with open(output_file, 'w', newline='') as f:
+def batch_requests(
+    server_url: str,
+    input_file: pd.DataFrame,
+    question_column: str,
+    output_file: str,
+    optional_fields: list[str] = None,
+    extra_parameters: dict = None,
+    text_boost: float = 1.0,
+    embedding_boost: float = 1.0,
+):
+    with open(output_file, "w", newline="") as f:
         fieldnames = [
             "query",
             "resources_id_contexts",
@@ -28,7 +29,7 @@ def batch_requests(server_url: str,
             "predicted_n",
             "predicted_ms",
             "predicted_per_token_ms",
-            "predicted_per_second"
+            "predicted_per_second",
         ]
 
         if optional_fields:
@@ -42,13 +43,15 @@ def batch_requests(server_url: str,
         for _, row in input_file.iterrows():
             question = row[question_column]
 
-            rag_response = query_rag_server(server_url=server_url,
-                                            query=question,
-                                            k=5,
-                                            threshold=0.2,
-                                            stream=False,
-                                            text_boost=text_boost,
-                                            embedding_boost=embedding_boost).json()
+            rag_response = query_rag_server(
+                server_url=server_url,
+                query=question,
+                k=5,
+                threshold=0.2,
+                stream=False,
+                text_boost=text_boost,
+                embedding_boost=embedding_boost,
+            ).json()
 
             if optional_fields and rag_response:
                 for field in optional_fields:

@@ -3,13 +3,9 @@ import random
 import requests
 
 
-def methodlogy_1_retrieval_metrics(entry_dict,
-                                   openai_responses,
-                                   num_sampled_questions,
-                                   endpoint_url,
-                                   search_text_boost,
-                                   search_embedding_boost,
-                                   k=5):
+def methodlogy_1_retrieval_metrics(
+    entry_dict, openai_responses, num_sampled_questions, endpoint_url, search_text_boost, search_embedding_boost, k=5
+):
     # Initialize counters and sums for metrics
     total_questions = 0
     total_contexts_found = 0
@@ -46,16 +42,15 @@ def methodlogy_1_retrieval_metrics(entry_dict,
 
                 for qa in questions_and_answers:
                     if isinstance(qa, dict) and "question" in qa:
-
                         question = qa["question"]
                         total_questions += 1
 
                         # Query the search endpoint
                         params = {
-                            'query': question,
-                            'k': k,
-                            'text_boost': search_text_boost,
-                            'embedding_boost': search_embedding_boost
+                            "query": question,
+                            "k": k,
+                            "text_boost": search_text_boost,
+                            "embedding_boost": search_embedding_boost,
                         }
                         response = requests.get(endpoint_url, params=params)
                         search_results = response.json()
@@ -95,17 +90,13 @@ def methodlogy_1_retrieval_metrics(entry_dict,
         "Total Questions": total_questions,
         "Total Openai json error": openai_json_error,
         "Total contexts fount": total_contexts_found,
-        "Total positions sum": position_sum
+        "Total positions sum": position_sum,
     }
 
 
-def methodlogy_2_retrieval_metrics(resource_chunk_counts,
-                                   openai_responses,
-                                   num_sampled_questions,
-                                   endpoint_url,
-                                   search_text_boost,
-                                   search_embedding_boost,
-                                   k=5):
+def methodlogy_2_retrieval_metrics(
+    resource_chunk_counts, openai_responses, num_sampled_questions, endpoint_url, search_text_boost, search_embedding_boost, k=5
+):
     # Initialize counters and sums for metrics
     total_questions = 0
     total_contexts_found = 0
@@ -142,10 +133,10 @@ def methodlogy_2_retrieval_metrics(resource_chunk_counts,
 
                     # Query the search endpoint
                     params = {
-                        'query': question,
-                        'k': k,
-                        'text_boost': search_text_boost,
-                        'embedding_boost': search_embedding_boost
+                        "query": question,
+                        "k": k,
+                        "text_boost": search_text_boost,
+                        "embedding_boost": search_embedding_boost,
                     }
                     response = requests.get(endpoint_url, params=params)
                     search_results = response.json()
@@ -158,7 +149,7 @@ def methodlogy_2_retrieval_metrics(resource_chunk_counts,
                     # Get the total number of relevant chunks for this resource_id
                     relevant_chunks = resource_chunk_counts[custom_id]
 
-                    if search_results != {'detail': 'Not Found'}:
+                    if search_results != {"detail": "Not Found"}:
                         for i, result in enumerate(search_results):
                             if result["metadata"]["resource_id"] == custom_id:
                                 if not found:
@@ -167,7 +158,7 @@ def methodlogy_2_retrieval_metrics(resource_chunk_counts,
                                     reciprocal_rank_sum += 1 / rank
                                     found = True
                                 retrieved_relevant_chunks += 1
-                    elif search_results == {'detail': 'Not Found'}:
+                    elif search_results == {"detail": "Not Found"}:
                         search_results = {}
 
                     # Calculate precision and recall for this specific question
@@ -199,5 +190,5 @@ def methodlogy_2_retrieval_metrics(resource_chunk_counts,
         "Total Questions": total_questions,
         "Total Openai json error": openai_json_error,
         "Total contexts found": total_contexts_found,
-        "Total positions sum": position_sum
+        "Total positions sum": position_sum,
     }

@@ -1,0 +1,17 @@
+{
+    "experiment_name": "Retrieval evaluation full_json_dumps_strategy",
+    "search_strategy": {
+        "text_boost": 0.25,
+        "embedding_boost": 4.0
+    },
+    "boosting_combinations": [0, 7],
+    "using_urls": false,
+    "questions_with_ids_and_dates": false,
+    "chunk_size": 600,
+    "chunk_overlap": 50,
+    "num_sampled_questions": 1,
+    "methodology": "methodology_2",
+    "endpoint_url": "http://0.0.0.0:8000/search",
+    "FHIR_DATA_CHUNKS_FILE": "FHIR_chunks_no_urls.json",
+    "OPEN_AI_OUTPUT_DATA": "batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.jsonl"
+}

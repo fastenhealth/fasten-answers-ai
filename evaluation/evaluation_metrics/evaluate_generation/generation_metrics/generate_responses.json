@@ -1,9 +1,0 @@
-{
-    "SERVER_URL": "http://localhost:8000/generate",
-    "JSONL_FILE": "batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.jsonl",
-    "RAG_OUTPUT_CSV": "responses_evaluate_generation.csv",
-    "CORES": 11,
-    "CONTEXT_SIZE": 2048,
-    "TEXT_BOOST": 0.25,
-    "EMBEDDING_BOOST": 4.0
-}

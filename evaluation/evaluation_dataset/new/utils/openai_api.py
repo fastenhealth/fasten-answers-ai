@@ -9,12 +9,14 @@ from settings import QUESTION_GEN_SYS_TMPL, QUESTION_GEN_USER_TMPL, OPENAI_MODEL
 
 
 class OpenAIBatchAPI:
-    def __init__(self,
-                 system_prompt=QUESTION_GEN_SYS_TMPL,
-                 user_prompt=QUESTION_GEN_USER_TMPL,
-                 max_tokens=MAX_TOKENS,
-                 openai_model=OPENAI_MODEL,
-                 tokens_limit=10000):
+    def __init__(
+        self,
+        system_prompt=QUESTION_GEN_SYS_TMPL,
+        user_prompt=QUESTION_GEN_USER_TMPL,
+        max_tokens=MAX_TOKENS,
+        openai_model=OPENAI_MODEL,
+        tokens_limit=10000,
+    ):
         self.system_prompt = system_prompt
         self.user_prompt = user_prompt
         self.max_tokens = max_tokens
@@ -24,23 +26,17 @@ class OpenAIBatchAPI:
         self.total_tokens = []
 
     def generate_qa_file_batch_api(
-        self,
-        resources: Dict[str, dict],
-        num_questions_per_chunk: int = 1,
-        output_file: str = "qa_file.jsonl"
+        self, resources: Dict[str, dict], num_questions_per_chunk: int = 1, output_file: str = "qa_file.jsonl"
     ) -> (int, int):
         """Generate questions and save to a .jsonl file."""
         method = "POST"
         url = "/v1/chat/completions"
-        system_prompt_formatted = self.system_prompt.format(
-            num_questions_per_chunk=num_questions_per_chunk)
+        system_prompt_formatted = self.system_prompt.format(num_questions_per_chunk=num_questions_per_chunk)
 
         tokens_system_prompt = get_total_tokens_from_string(system_prompt_formatted)
 
         for key, value in resources.items():
-            user_prompt_formatted = self.user_prompt.format(
-                context_str=value.get("text_chunk")
-            )
+            user_prompt_formatted = self.user_prompt.format(context_str=value.get("text_chunk"))
             tokens_user_prompt = get_total_tokens_from_string(user_prompt_formatted)
 
             if tokens_system_prompt + tokens_user_prompt < self.tokens_limit:
@@ -52,10 +48,10 @@ class OpenAIBatchAPI:
                         "model": self.openai_model,
                         "messages": [
                             {"role": "system", "content": system_prompt_formatted},
-                            {"role": "user", "content": user_prompt_formatted}
+                            {"role": "user", "content": user_prompt_formatted},
                         ],
-                        "max_tokens": self.max_tokens
-                    }
+                        "max_tokens": self.max_tokens,
+                    },
                 }
                 self.results.append(input_object)
                 self.total_tokens.append(tokens_user_prompt)
@@ -73,19 +69,16 @@ class OpenAIBatchAPI:
 
     def _save_to_jsonl(self, output_file: str) -> None:
         """Helper function to save results to a .jsonl file."""
-        with open(output_file, 'w') as f:
+        with open(output_file, "w") as f:
             for item in self.results:
-                f.write(json.dumps(item) + '\n')
+                f.write(json.dumps(item) + "\n")
 
     def openai_create_completion(self, system_prompt, user_prompt) -> dict:
         try:
             response = openai.chat.completions.create(
                 model=self.openai_model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                max_tokens=self.max_tokens
+                messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+                max_tokens=self.max_tokens,
             )
             return response
         except HTTPError as http_err:
@@ -100,7 +93,7 @@ class OpenAIBatchAPI:
         total_openai_queries: int,
         cost_per_million_input: float = 0.075,
         cost_per_million_output: float = 0.3,
-        tokens_generated: int = 300
+        tokens_generated: int = 300,
     ) -> (float, float, float):
         """Generate aprox costs of using Batch API"""
         input_costs = round(total_tokens_input * (cost_per_million_input / 1000000), 3)

@@ -57,17 +57,15 @@ QUESTION_GEN_USER_TMPL = (
     "Based solely on the provided context information, "
     "generate a JSON object containing keys and values for relevant question and answer. "
     "Ensure that your response strictly follows this format: "
-    "{{\"questions_and_answers\": ["
-    "{{\"question\": \"example question\", \"answer\": \"example answer\"}}"
+    '{{"questions_and_answers": ['
+    '{{"question": "example question", "answer": "example answer"}}'
     "]}}."
     " If the context does not provide enough information to generate any question and answer, "
     "do not generate any output."
 )
 
 
-def create_directories(path_without_urls,
-                       path_with_urls,
-                       remove_urls):
+def create_directories(path_without_urls, path_with_urls, remove_urls):
     if remove_urls:
         if not os.path.exists(path_without_urls):
             os.makedirs(path_without_urls)

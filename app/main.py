@@ -3,13 +3,12 @@ import os
 
 from elasticsearch import helpers
 from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.responses import JSONResponse
 
 from .db.index_documents import bulk_load_from_json_flattened_file
 from .config.elasticsearch_config import create_index_if_not_exists
 from .services.search_documents import search_query
 from .services.process_search_output import process_search_output, \
-    stream_llm_response
+    llm_response
 from .models.sentence_transformer import get_sentence_transformer
 from .config.settings import settings, logger
 
@@ -61,21 +60,34 @@ async def delete_all_documents(index_name: str):
 
 
 @app.get("/search")
-async def search_documents(query: str, k: int = 5, threshold: float = 0,
-                           text_boost: float = 1.0, embedding_boost: float = 1.0):
-    results = search_query(query, embedding_model, es_client, k=k,
-                           threshold=threshold, text_boost=text_boost,
+async def search_documents(query: str,
+                           k: int = 5, 
+                           text_boost: float = 0.25,
+                           embedding_boost: float = 4.0):
+    results = search_query(query,
+                           embedding_model,
+                           es_client, k=k,
+                           text_boost=text_boost,
                            embedding_boost=embedding_boost)
     return results
 
 
 @app.get("/generate")
-async def answer_query(query: str, k: int = 5, threshold: float = 0):
-    results = search_query(query, embedding_model, es_client, k=k,
-                           threshold=threshold)
+async def answer_query(query: str,
+                       k: int = 5,
+                       params=None,
+                       stream: bool = False,
+                       text_boost: float = 0.25,
+                       embedding_boost: float = 4.0):
+    results = search_query(query,
+                           embedding_model,
+                            es_client,
+                           k=k,
+                           text_boost=text_boost,
+                           embedding_boost=embedding_boost)
     if not results:
         concatenated_content = "There is no context"
     else:
-        concatenated_content = process_search_output(results)
-    concatenated_content = process_search_output(results)
-    return stream_llm_response(concatenated_content, query)
+        concatenated_content, resources_id = process_search_output(results)
+
+    return llm_response(concatenated_content, query, resources_id, stream, params)
