@@ -1,4 +1,6 @@
-import requests
+from typing import List
+import aiohttp
+import asyncio
 
 
 class LlamaCppClient:
@@ -12,7 +14,17 @@ class LlamaCppClient:
         self.stop = settings.get("stop")
         self.stream = settings.get("stream")
 
-    def chat(self, user_prompt: str, question: str):
+    async def _call_model(self, url, pl):
+        async with aiohttp.ClientSession() as session:
+
+            async def fetch(url, data, i):
+                async with session.post(url, json=data) as response:
+                    j = await response.json()
+                    return j
+
+            return await asyncio.gather(*[fetch(url, data, i) for i, data in enumerate(pl)])
+
+    def chat(self, user_prompts: List[str], questions: List[str]):
         params = {
             "n_predict": self.n_predict,
             "temperature": self.temperature,
@@ -20,10 +32,14 @@ class LlamaCppClient:
             "stream": self.stream,
             "cache_prompt": False,
         }
+        pl = []
+        for user_prompt, question in zip(user_prompts, questions):
+            model_prompt = self.model_prompt.format(system_prompt=self.system_prompt, user_prompt=user_prompt, question=question)
 
-        model_prompt = self.model_prompt.format(system_prompt=self.system_prompt, user_prompt=user_prompt, question=question)
+            data = {"prompt": model_prompt, **params}
+            pl.append(data)
 
-        data = {"prompt": model_prompt, **params}
+        url = f"{self.base_url}/completion"
+        responses = asyncio.run(self._call_model(url, pl))
 
-        response = requests.post(f"{self.base_url}/completion", json=data)
-        return response
+        return responses
