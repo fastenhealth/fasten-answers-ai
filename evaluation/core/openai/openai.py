@@ -2,8 +2,6 @@ import requests
 
 import tiktoken
 
-import pdb
-
 
 def get_chat_completion(
     openai_api_key,
