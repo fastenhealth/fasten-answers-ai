@@ -14,7 +14,8 @@ from evaluation.core.evaluators.generation.faithfullness import FaithfulnessEval
 load_dotenv()
 
 # Load config
-INPUT_PATH = os.path.dirname(__file__) + "/data/input_get_metrics.json"
+INPUT_PATH = os.path.join(os.path.dirname(
+    __file__), "data", "input_get_metrics.json")
 with open(INPUT_PATH, "r") as config_file:
     config = json.load(config_file)
 
@@ -36,8 +37,8 @@ CORRECTNESS_RESULTS_CSV = os.path.join(
     DATA_DIR, "openai_outputs", config["CORRECTNESS_RESULTS_CSV"])
 FAITHFULNESS_RESULTS_CSV = os.path.join(
     DATA_DIR, "openai_outputs", config["FAITHFULNESS_RESULTS_CSV"])
-RESULT_METRICS_TXT = os.path.dirname(
-    __file__) + "/data/output_generation_metrics.txt"
+RESULT_METRICS_TXT = os.path.join(os.path.dirname(
+    __file__), "data", "output_generation_metrics.txt")
 
 # Columns of interest
 QUERY_COLUMN = config["QUERY_COLUMN"]
@@ -65,7 +66,7 @@ def main():
 
     generated_answers[REFERENCE_ANSWER_COLUMN] = reference_answers[REFERENCE_ANSWER_COLUMN]
     generated_answers[RESOURCE_ID_COLUMN] = reference_answers[RESOURCE_ID_COLUMN]
-    
+
     # Instantiate evaluators
     correctness_evaluator = CorrectnessEvaluator(OPENAI_API_KEY,
                                                  LLM_MODEL,
@@ -119,7 +120,8 @@ def main():
 
         if UPLOAD_ARTIFACTS:
             for artifact_name, file_path in artifact_files.items():
-                task.upload_artifact(name=artifact_name, artifact_object=file_path)
+                task.upload_artifact(name=artifact_name,
+                                     artifact_object=file_path)
 
         task.close()
 

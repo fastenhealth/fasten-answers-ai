@@ -8,7 +8,8 @@ from evaluation.core.openai.openai import calculate_total_tokens, calculate_api_
 
 
 # Load config
-INPUT_PATH = os.path.dirname(__file__) + "/data/input_estimate_costs.json"
+INPUT_PATH = os.path.join(os.path.dirname(__file__), "data", "input_estimate_costs.json")
+
 with open(INPUT_PATH, "r") as config_file:
     config = json.load(config_file)
 
@@ -28,7 +29,7 @@ GENERATED_ANSWER_COLUMN = config.get("GENERATED_ANSWER_COLUMN")
 REFERENCE_ANSWER_COLUMN = config.get("REFERENCE_ANSWER_COLUMN")
 
 # Output costs
-OUTPUT_COSTS = os.path.dirname(__file__) + "/data/output_estimate_costs.txt"
+OUTPUT_COSTS = os.path.join(os.path.dirname(__file__), "data", "output_estimate_costs.txt")
 COST_PER_MILLION_INPUT_TOKENS= config.get("COST_PER_MILLION_INPUT_TOKENS")
 COST_PER_MILLION_OUTPUT_TOKENS= config.get("COST_PER_MILLION_OUTPUT_TOKENS")
 

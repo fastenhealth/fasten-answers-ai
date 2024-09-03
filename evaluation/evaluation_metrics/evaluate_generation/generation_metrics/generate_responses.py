@@ -6,7 +6,7 @@ from evaluation.core.rag_requests.batch_requests import batch_requests
 
 
 # Load config
-with open(os.path.join(os.path.dirname(__file__), "/data/input_generate_responses.json"), "r") as config_file:
+with open(os.path.join(os.path.dirname(__file__), "data", "input_generate_responses.json"), "r") as config_file:
     config = json.load(config_file)
 
 DATA_DIR = os.path.abspath(os.path.join(
