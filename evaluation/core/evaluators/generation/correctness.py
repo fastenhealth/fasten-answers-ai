@@ -7,9 +7,14 @@ we compare the answer of our rag vs the answer of the evaluator.
 https://docs.llamaindex.ai/en/stable/examples/low_level/evaluation/#evaluating-generation
 """
 
+import csv
+import json
+import logging
+import os
+from tqdm import tqdm
 import pandas as pd
 
-from evaluation.core.openai import get_chat_completion
+from evaluation.core.openai.openai import get_chat_completion
 
 
 CORRECTNESS_SYS_TMPL = """
@@ -63,10 +68,11 @@ ANSWER_JSON_SCHEMA = {
 
 
 class CorrectnessEvaluator:
-    def __init__(self, openai_api_key, model="gpt-4o-2024-08-06", threshold=4.0):
+    def __init__(self, openai_api_key, model="gpt-4o-2024-08-06", threshold=4.0, max_tokens=300):
         self.openai_api_key = openai_api_key
         self.model = model
         self.threshold = threshold
+        self.max_tokens = max_tokens
 
     def run_correctness_eval(self, query_str: str, reference_answer: str, generated_answer: str):
         """
@@ -80,34 +86,92 @@ class CorrectnessEvaluator:
         Returns:
         - dict, containing whether the answer passes the threshold, the score, and reasoning.
         """
-        user_prompt = CORRECTNESS_USER_TMPL.format(query_str, reference_answer, generated_answer)
-        system_prompt = CORRECTNESS_SYS_TMPL
+        try:
+            user_prompt = CORRECTNESS_USER_TMPL.format(
+                query=query_str,
+                reference_answer=reference_answer,
+                generated_answer=generated_answer)
 
-        open_ai_response = get_chat_completion(self.openai_api_key, user_prompt, system_prompt, model=self.model)
-        score = open_ai_response["score"]
-        reasoning = open_ai_response["reasoning"]
+            system_prompt = CORRECTNESS_SYS_TMPL
 
-        return {"passing": score >= self.threshold, "score": score, "reason": reasoning}
+            open_ai_response = get_chat_completion(self.openai_api_key,
+                                                   user_prompt,
+                                                   system_prompt,
+                                                   ANSWER_JSON_SCHEMA,
+                                                   model=self.model,
+                                                   max_tokens=self.max_tokens)
+            json_answer = json.loads(open_ai_response.get("choices")[
+                                     0].get("message").get("content"))
 
-    def run_batch_evaluation(self, df: pd.DataFrame):
+            score = json_answer["score"]
+            reasoning = json_answer["reasoning"]
+
+            return {"score": score, "reasoning": reasoning, "passing": score >= self.threshold, }
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON response: {e}")
+            return {"score": None, "passing": None, "reasoning": "Invalid JSON response"}
+
+        except KeyError as e:
+            logging.error(f"Missing key in JSON response: {e}")
+            return {"score": None, "passing": None, "reasoning": "Incomplete JSON response"}
+
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return {"score": None, "passing": None, "reasoning": "An unexpected error occurred"}
+
+    def run_batch_evaluation(self,
+                             df: pd.DataFrame,
+                             output_file: str,
+                             query_column: str,
+                             reference_answer_column: str,
+                             generated_answer_column: str,
+                             resource_id_column: str
+                             ):
         """
         Runs correctness evaluation on a batch of queries, reference answers, and generated answers.
+        Saves results incrementally to avoid data loss in case of failure.
 
         Parameters:
         - df: pd.DataFrame, a dataframe with columns 'query', 'reference_answer', and 'generated_answer'.
+        - output_file: str, the path to the output CSV file where results will be saved.
 
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for score, reasoning, and passing status.
         """
-        results = []
-        for _, row in df.iterrows():
-            result = self.run_correctness_eval(row["query"], row["reference_answer"], row["generated_answer"])
-            results.append(result)
 
-        # Convert list of dicts to a DataFrame
-        results_df = pd.DataFrame(results)
+        # Determine if the file already exists
+        file_exists = os.path.isfile(output_file)
 
-        # Concatenate the original dataframe with the results
-        df = pd.concat([df, results_df], axis=1)
+        with open(output_file, mode='a', newline='') as file:
+            writer = csv.DictWriter(
+                file, fieldnames=[resource_id_column, 'score', 'reasoning', 'passing'])
 
-        return df
+            # Write header only if the file does not exist
+            if not file_exists:
+                writer.writeheader()
+
+            try:
+                for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing correctness"):
+                    result = self.run_correctness_eval(
+                        row[query_column],
+                        row[reference_answer_column],
+                        row[generated_answer_column])
+                    result[resource_id_column] = row[resource_id_column]
+                    # Write the result to the CSV file
+                    writer.writerow(result)
+
+                    # Ensure the data is written to disk
+                    file.flush()
+
+            except Exception as e:
+                print(f"Error encountered: {e}. Saving progress and exiting.")
+                raise
+
+        # Load the results back into a DataFrame and concatenate with the original
+        results_df = pd.read_csv(output_file)
+
+        correctnes_mean_score = round(results_df["score"].sum(
+        ) / (len(results_df) * 5), 2)
+
+        return correctnes_mean_score

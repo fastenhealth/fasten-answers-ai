@@ -1,0 +1,15 @@
+{
+    "REFERENCE_ANSWERS_FILE": "batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.csv",
+    "GENERATED_ANSWERS_FILE": "Phi3.5-responses_evaluate_generation.csv",
+    "CORRECTNESS_RESULTS_CSV": "correctness_results.csv",
+    "FAITHFULNESS_RESULTS_CSV": "faithfulness_results.csv",
+    "QUERY_COLUMN": "query",
+    "CONTEXTS_COLUMN": "concatenated_contexts",
+    "GENERATED_ANSWER_COLUMN": "response",
+    "REFERENCE_ANSWER_COLUMN": "openai_answer",
+    "RESOURCE_ID_COLUMN": "resource_id_source",
+    "LLM_MODEL": "gpt-4o-mini-2024-07-18",
+    "EXPERIMENT_NAME": "Generation evaluation with Phi3.5 Q8_0",
+    "UPLOAD_EXPERIMENT": true,
+    "UPLOAD_ARTIFACTS": true
+}
