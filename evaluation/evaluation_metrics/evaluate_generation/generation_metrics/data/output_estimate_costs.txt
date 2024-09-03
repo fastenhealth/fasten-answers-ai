@@ -1,0 +1,18 @@
+Tota Estimated Costs:
+$0.2
+
+
+Correctness Evaluation Costs:
+Estimated Total Costs: $0.08
+Input Costs: $0.023
+Output Costs: $0.057
+Total Input Tokens: 152604
+Total Output Tokens: 95400
+
+
+Faithfulness Evaluation Costs:
+Estimated Total Costs: $0.12
+Input Costs: $0.063
+Output Costs: $0.057
+Total Input Tokens: 416979
+Total Output Tokens: 95400

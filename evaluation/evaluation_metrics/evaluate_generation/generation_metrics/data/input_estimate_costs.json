@@ -1,0 +1,10 @@
+{
+    "REFERENCE_ANSWERS_FILE": "batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.csv",
+    "GENERATED_ANSWERS_FILE": "Phi3.5-responses_evaluate_generation.csv",
+    "COST_PER_MILLION_INPUT_TOKENS": 0.150,
+    "COST_PER_MILLION_OUTPUT_TOKENS": 0.600,
+    "QUERY_COLUMN": "query",
+    "CONTEXTS_COLUMN": "concatenated_contexts",
+    "GENERATED_ANSWER_COLUMN": "response",
+    "REFERENCE_ANSWER_COLUMN": "openai_answer"
+}

@@ -5,9 +5,14 @@ https://docs.llamaindex.ai/en/stable/examples/low_level/evaluation/#evaluating-g
 """
 
 import csv
+import json
+import logging
 import os
 import pandas as pd
-from evaluation.core.openai import get_chat_completion
+
+from tqdm import tqdm
+
+from evaluation.core.openai.openai import get_chat_completion
 
 
 FAITHFULLNESS_SYS_TMPL = """
@@ -84,30 +89,52 @@ class FaithfulnessEvaluator:
         Returns:
         - dict, containing evaluations on relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
-        user_prompt = FAITHFULLNESS_USER_TMPL.format(
-            generated_answer=generated_answer, contexts=contexts)
-        system_prompt = FAITHFULLNESS_SYS_TMPL
+        try:
+            user_prompt = FAITHFULLNESS_USER_TMPL.format(generated_answer=generated_answer,
+                                                         contexts=contexts)
+            system_prompt = FAITHFULLNESS_SYS_TMPL
 
-        open_ai_response = get_chat_completion(
-            self.openai_api_key, user_prompt, system_prompt, model=self.model, max_tokens=self.max_tokens)
-        relevancy = 1 if open_ai_response["relevancy"] == "YES" else 0
-        accuracy = 1 if open_ai_response["accuracy"] == "YES" else 0
-        conciseness_and_pertinence = 1 if open_ai_response[
-            "conciseness_and_pertinence"] == "YES" else 0
-        reasoning = open_ai_response["reasoning"]
+            open_ai_response = get_chat_completion(self.openai_api_key,
+                                                   user_prompt,
+                                                   system_prompt,
+                                                   ANSWER_JSON_SCHEMA,
+                                                   model=self.model,
+                                                   max_tokens=self.max_tokens)
 
-        return {
-            "relevancy": relevancy,
-            "accuracy": accuracy,
-            "conciseness_and_pertinence": conciseness_and_pertinence,
-            "reasoning": reasoning,
-        }
+            json_answer = json.loads(open_ai_response.get("choices")[
+                                     0].get("message").get("content"))
 
-    def run_batch_evaluation(self, 
+            relevancy = 1 if json_answer["relevancy"] == "YES" else 0
+            accuracy = 1 if json_answer["accuracy"] == "YES" else 0
+            conciseness_and_pertinence = 1 if json_answer[
+                "conciseness_and_pertinence"] == "YES" else 0
+            reasoning = json_answer["reasoning"]
+
+            return {
+                "relevancy": relevancy,
+                "accuracy": accuracy,
+                "conciseness_and_pertinence": conciseness_and_pertinence,
+                "reasoning": reasoning,
+            }
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON response: {e}")
+            return {"relevancy": None, "accuracy": None, "conciseness_and_pertinence": None, "reasoning": "Invalid JSON response"}
+
+        except KeyError as e:
+            logging.error(f"Missing key in JSON response: {e}")
+            return {"relevancy": None, "accuracy": None, "conciseness_and_pertinence": None, "reasoning": "Incomplete JSON response"}
+
+        except Exception as e:
+            logging.error(f"An error occurred: {e}")
+            return {"relevancy": None, "accuracy": None, "conciseness_and_pertinence": None, "reasoning": "An unexpected error occurred"}
+
+    def run_batch_evaluation(self,
                              df: pd.DataFrame,
                              output_file: str,
                              generated_answer_column: str,
-                             contexts_column: str):
+                             contexts_column: str,
+                             resource_id_column: str):
         """
         Runs faithfulness evaluation on a batch of generated answers and contexts.
         Saves results incrementally to avoid data loss in case of failure.
@@ -124,17 +151,18 @@ class FaithfulnessEvaluator:
 
         with open(output_file, mode='a', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=[
-                                    'relevancy', 'accuracy', 'conciseness_and_pertinence', 'reasoning'])
+                                    resource_id_column, 'relevancy', 'accuracy', 'conciseness_and_pertinence', 'reasoning'])
 
             # Write header only if the file does not exist
             if not file_exists:
                 writer.writeheader()
 
             try:
-                for _, row in df.iterrows():
+                for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing faithfulness"):
                     result = self.run_faithfulness_eval(
-                        row[generated_answer_column], row[contexts_column])
-
+                        row[generated_answer_column],
+                        row[contexts_column])
+                    result[resource_id_column] = row[resource_id_column]
                     # Write the result to the CSV file
                     writer.writerow(result)
 
@@ -147,10 +175,13 @@ class FaithfulnessEvaluator:
 
         # Load the results back into a DataFrame and concatenate with the original
         results_df = pd.read_csv(output_file)
-        
+
         total_questions = len(results_df)
-        faithfulness_relevancy = results_df["relevancy"].sum() / total_questions
-        faithfulness_accuracy = results_df["accuracy"].sum() / total_questions
-        faithfulness_conciseness_and_pertinence = results_df["conciseness_and_pertinence"].sum() / total_questions
- 
+        faithfulness_relevancy = round(results_df["relevancy"].sum(
+        ) / total_questions, 2)
+        faithfulness_accuracy = round(
+            results_df["accuracy"].sum() / total_questions, 2)
+        faithfulness_conciseness_and_pertinence = round(results_df["conciseness_and_pertinence"].sum(
+        ) / total_questions, 2)
+
         return faithfulness_relevancy, faithfulness_accuracy, faithfulness_conciseness_and_pertinence

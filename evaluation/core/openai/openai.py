@@ -2,6 +2,8 @@ import requests
 
 import tiktoken
 
+import pdb
+
 
 def get_chat_completion(
     openai_api_key,
@@ -36,7 +38,9 @@ def get_chat_completion(
     }
 
     try:
-        response = requests.post(endpoint_url, headers=headers, json=payload)
+        response = requests.post(endpoint_url,
+                                 headers=headers,
+                                 json=payload)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as http_err:
@@ -55,32 +59,34 @@ def get_total_tokens_from_string(string: str,
 
 
 def calculate_total_tokens(df,
-                           reference_df,
+                           query_column,
+                           generated_answer_column,
+                           contexts_column,
+                           reference_answer_column,
                            system_template: str,
                            user_template: str,
                            template_type: str,
                            encoding_name: str) -> int:
     """Calculates the total number of tokens required for the batch based on the type of evaluation."""
     total_tokens = 0
-    
-    for _, row in df.iterrows():
-        reference_answer = reference_df.loc[reference_df['resource_id_source'] == row['resource_id_source'], 'openai_answer'].values[0]
 
+    for _, row in df.iterrows():
         if template_type == 'correctness':
             user_prompt = user_template.format(
-                query=row['query'],
-                reference_answer=reference_answer,
-                generated_answer=row['generated_answer']
+                query=row[query_column],
+                reference_answer=row[reference_answer_column],
+                generated_answer=row[generated_answer_column]
             )
         elif template_type == 'faithfulness':
             user_prompt = user_template.format(
-                generated_answer=row['generated_answer'],
-                contexts=row['concatenated_contexts']
+                generated_answer=row[generated_answer_column],
+                contexts=row[contexts_column]
             )
 
         system_prompt = system_template
         complete_prompt = system_prompt + user_prompt
-        total_tokens += get_total_tokens_from_string(complete_prompt, encoding_name=encoding_name)
+        total_tokens += get_total_tokens_from_string(
+            complete_prompt, encoding_name=encoding_name)
 
     return total_tokens
 
@@ -118,4 +124,10 @@ def calculate_api_costs(
     # Calculate the total cost
     total_cost = round(input_cost + output_cost, 2)
 
-    return total_cost, input_cost, output_cost, total_input_tokens, total_output_tokens
+    return {
+        "total_cost": total_cost,
+        "input_cost": input_cost,
+        "output_cost": output_cost,
+        "total_input_tokens": total_input_tokens,
+        "total_output_tokens": total_output_tokens
+    }

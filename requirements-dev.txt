@@ -1,5 +1,8 @@
+boto3==1.35.10 
 clearml==1.16.4
+python-dotenv==1.0.1 
 pandas==2.2.2
-python-dotenv==1.0.1
 requests==2.32.3
 ruff==0.6.3
+tqdm==4.66.5
+tiktoken==0.7.0

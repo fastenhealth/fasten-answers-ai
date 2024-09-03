@@ -123,7 +123,6 @@ scripts/rag_evaluation/data/flat_files/
 scripts/rag_evaluation/evaluate_generation/generation_speed/data/*.csv
 scripts/rag_evaluation/evaluate_retrieval/data/output/*csv
 
-*.jsonl
 /models
 /data/
 !/evaluation/data/
