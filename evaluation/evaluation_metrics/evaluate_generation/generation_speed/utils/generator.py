@@ -2,7 +2,7 @@ import csv
 from tqdm import tqdm
 
 
-def generate_responses(params, contexts, questions, llm_client, batch_size=8):
+def generate_responses(params, contexts, questions, llm_client, batch_size=4):
     output_file_name = params["output_file"]
 
     with open(f"./data/{output_file_name}", "w", newline="") as output_file:
@@ -30,14 +30,15 @@ def generate_responses(params, contexts, questions, llm_client, batch_size=8):
         dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
         dict_writer.writeheader()
 
+        context_keys = list(contexts.keys())
         for i in tqdm(range(0, len(contexts), batch_size)):
-            batch_questions = [questions[context_size] for context_size in list(contexts.keys())[i : i + batch_size]]
-            context_texts = [contexts[context_size] for context_size in list(contexts.keys())[i : i + batch_size]]
+            batch_questions = [questions[context_size] for context_size in context_keys[i : i + batch_size]]
+            context_texts = [contexts[context_size] for context_size in context_keys[i : i + batch_size]]
             responses = llm_client.chat(user_prompts=context_texts, questions=batch_questions)
-            for i, full_response in enumerate(responses):
-                context_size = list(contexts.keys())[i]
-                context = context_texts[i]
-                question = batch_questions[i]
+            for j, full_response in enumerate(responses):
+                context_size = context_keys[i + j]
+                context = context_texts[j]
+                question = batch_questions[j]
 
                 result = {
                     "model": full_response["model"],

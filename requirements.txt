@@ -1,5 +1,7 @@
 elasticsearch==8.15.0
 fastapi==0.112.2
 sentence-transformers==3.0.1
+python-multipart
 requests==2.32.3
 ruff==0.6.3
+uvicorn
