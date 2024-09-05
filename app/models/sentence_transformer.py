@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer
-from ..config.settings import settings
+from config.settings import settings
 
 
 def get_sentence_transformer():
-    return SentenceTransformer(settings.embedding_model_name)
+    return SentenceTransformer(settings.model.embedding_model_name)

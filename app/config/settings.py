@@ -2,37 +2,39 @@ import logging
 import os
 
 
-class Settings:
-    es_host: str = os.getenv("ES_HOST", "http://localhost:9200")
-    es_user: str = os.getenv("ES_USER", "elastic")
-    es_password: str = os.getenv("ES_PASSWORD", "changeme")
-    embedding_model_name: str = os.getenv("EMBEDDING_MODEL_NAME",
-                                          "all-MiniLM-L6-v2")
-    host: str = os.getenv("LLAMA_HOST", "http://localhost:8090")
-    system_prompt: str = os.getenv("LLAMA_PROMPT",
-                                   ("You are an intelligent, polite medical assistant embedded "
-                                    "within a Retrieval-Augmented Generation (RAG) system. "
-                                    "Your responses are based strictly on information retrieved "
-                                    "from a database, specifically FHIR data chunks. These chunks may not always be clear. "
-                                    "If you do not find relevant information, acknowledge it and do not attempt to fabricate answers. "
-                                    "Provide detailed, helpful, and accurate responses, and include references where applicable. "
-                                    "If information is not available, politely inform the user that you cannot provide an answer."))
-    index_name: str = os.getenv("INDEX_NAME", "fasten-index")
-    upload_dir: str = os.getenv("UPLOAD_DIR", "./data/")
-    model_prompt: str = ("<|system|>"
-                         "{system_prompt}<|end|>"
-                         "<|user|>"
-                         "Context information is below.\n "
-                         "---------------------\n "
-                         "{context}\n"
-                         "---------------------\n "
-                         "Given the context information (if there is any), "
-                         "this is my message: "
-                         "{message}"
-                         "<|end|>"
-                         "<|assistant|>"
-                         )
+class ElasticsearchSettings:
+    def __init__(self):
+        self.host = os.getenv("ES_HOST", "http://localhost:9200")
+        self.user = os.getenv("ES_USER", "elastic")
+        self.password = os.getenv("ES_PASSWORD", "changeme")
+        self.index_name = os.getenv("INDEX_NAME", "fasten-index")
 
+
+class ModelsSettings:
+    def __init__(self):
+        # Base dir
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        # Embedding model
+        self.embedding_model_name = os.getenv(
+            "EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+        # LLM host
+        self.llm_host = os.getenv("LLAMA_HOST", "http://localhost:8090")
+        # Conversation prompts
+        self.conversation_model_prompt = self.load_prompt(
+            os.path.join(base_dir, "prompts/conversation_model_prompt_Phi-3.5-instruct.txt"))
+        # Summaries prompts
+        self.summaries_model_prompt = self.load_prompt(
+            os.path.join(base_dir, "prompts/summaries_model_prompt_Phi-3.5-instruct.txt"))
+
+    def load_prompt(self, file_path: str) -> str:
+        with open(file_path, 'r') as file:
+            return file.read().strip()
+
+
+class Settings:
+    def __init__(self):
+        self.elasticsearch = ElasticsearchSettings()
+        self.model = ModelsSettings()
 
 settings = Settings()
 

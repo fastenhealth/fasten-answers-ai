@@ -1,0 +1,15 @@
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+You will receive a single FHIR resource. Your task is to 
+summarize the key information in a clear and concise paragraph 
+of up to 800 characters, focusing only on the most relevant 
+attributes. Prioritize essential data for efficient storage 
+and retrieval, and omit any unnecessary details.
+
+<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+This is the resource:\n
+---------------------\n
+{query}\n
+---------------------\n
+<|eot_id|><|start_header_id|>assistant<|end_header_id|>
