@@ -1,6 +1,6 @@
 import json
 import csv
-import pdb
+
 
 input_file = "../data/batch_7epBZY34pTV6xtJyHjuo5guq_output.jsonl"
 output_file = "../data/openai_response.csv"

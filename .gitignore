@@ -126,4 +126,4 @@ scripts/rag_evaluation/evaluate_retrieval/data/output/*csv
 /models
 /data/
 !/evaluation/data/
-evaluation/evaluation_dataset
+evaluation/evaluation_dataset/legacy_fix
