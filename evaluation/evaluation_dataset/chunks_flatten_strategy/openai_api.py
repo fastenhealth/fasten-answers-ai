@@ -1,7 +1,6 @@
 import json
 import numpy as np
 from requests.exceptions import HTTPError
-from typing import List
 
 import openai
 

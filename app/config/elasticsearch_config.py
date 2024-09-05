@@ -1,12 +1,13 @@
 from elasticsearch import Elasticsearch
 
-from .settings import settings, logger
+from config.settings import settings, logger
 
 
 def get_es_client():
     return Elasticsearch(
-        hosts=[settings.es_host],
-        basic_auth=(settings.es_user, settings.es_password),
+        hosts=[settings.elasticsearch.host],
+        basic_auth=(settings.elasticsearch.user,
+                    settings.elasticsearch.password),
         max_retries=10,
     )
 

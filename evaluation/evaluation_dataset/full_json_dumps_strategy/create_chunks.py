@@ -1,9 +1,7 @@
 import json
 import numpy as np
-from typing import List
 import matplotlib.pyplot as plt
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from settings import OPENAI_MODEL_EMBEDDING
 
