@@ -25,6 +25,9 @@ class ModelsSettings:
         # Summaries prompts
         self.summaries_model_prompt = self.load_prompt(
             os.path.join(base_dir, "prompts/summaries_model_prompt_Phi-3.5-instruct.txt"))
+        # Summaries openai system prompt
+        self.summaries_openai_system_prompt = self.load_prompt(
+            os.path.join(base_dir, "prompts/summaries_openai_system_prompt.txt"))
 
     def load_prompt(self, file_path: str) -> str:
         with open(file_path, 'r') as file:

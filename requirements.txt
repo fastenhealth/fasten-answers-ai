@@ -7,5 +7,6 @@ PyPDF2==3.0.1
 python-multipart==0.0.9
 requests==2.32.3
 ruff==0.6.3
+tqdm==4.66.5
 tiktoken==0.7.0
 uvicorn==0.30.6

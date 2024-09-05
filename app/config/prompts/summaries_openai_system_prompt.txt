@@ -1,0 +1,5 @@
+You will receive a single FHIR resource. Summarize the key information 
+from the resource in a clear, concise paragraph of plain text,
+ideally up to 800 characters. The output should be human-readable and 
+understandable, not in JSON or other structured formats. Focus on the most 
+relevant attributes and omit unnecessary details.
