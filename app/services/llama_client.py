@@ -40,43 +40,28 @@ class LlamaCppClient:
 
             return await asyncio.gather(*[fetch(url, data) for data in payloads])
 
-    def _build_payload(self,
-                       model_prompt,
-                       query,
-                       params,
-                       context=None):
+    def _build_payload(self, model_prompt, query, params, context=None):
         if context:
-            prompt = model_prompt.format(context=context,
-                                         query=query)
+            prompt = model_prompt.format(context=context, query=query)
         else:
             prompt = model_prompt.format(query=query)
 
-        data = {"prompt": prompt,
-                **params}
+        data = {"prompt": prompt, **params}
 
-        logger.info(
-            f"Sending request to llama.cpp server with prompt: {prompt}")
+        logger.info(f"Sending request to llama.cpp server with prompt: {prompt}")
 
         return data
 
-    def chat(self,
-             query,
-             stream,
-             context=None,
-             params=None,
-             task="conversate") -> dict:
+    def chat(self, query, stream, context=None, params=None, task="conversate") -> dict:
         params = params or self.DEFAULT_PARAMS.copy()
         params["stream"] = stream
 
         if task == "conversate":
-            data = self._build_payload(model_prompt=settings.model.conversation_model_prompt,
-                                       query=query,
-                                       params=params,
-                                       context=context)
+            data = self._build_payload(
+                model_prompt=settings.model.conversation_model_prompt, query=query, params=params, context=context
+            )
         elif task == "summarize":
-            data = self._build_payload(model_prompt=settings.model.summaries_model_prompt,
-                                       query=query,
-                                       params=params)
+            data = self._build_payload(model_prompt=settings.model.summaries_model_prompt, query=query, params=params)
 
         try:
             if params["stream"]:
@@ -94,8 +79,7 @@ class LlamaCppClient:
         for context, message in zip(contexts, messages):
             payloads.append(self._build_payload(context, message, params))
 
-        logger.info(
-            f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
+        logger.info(f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
         url = f"{self.base_url}/completion"
         try:
             return asyncio.run(self._call_model_parallel(url, payloads))
@@ -104,8 +88,7 @@ class LlamaCppClient:
             raise
 
     def _stream_response(self, data):
-        response = requests.post(
-            f"{self.base_url}/completion", json=data, stream=True)
+        response = requests.post(f"{self.base_url}/completion", json=data, stream=True)
         response.raise_for_status()
 
         for line in response.iter_lines():
