@@ -1,25 +1,41 @@
+from app.config.settings import settings, logger
+from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 import json
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, status
 from elasticsearch import helpers
 
 from app import es_client, embedding_model
-from config.settings import logger, settings
-from db.index_documents import bulk_load_fhir_data
-from services.search_documents import search_query, fetch_all_documents
+from app.config.settings import logger, settings
+from app.db.index_documents import bulk_load_fhir_data
+from app.processor.files_processor import csv_to_dict
+from app.services.search_documents import search_query, fetch_all_documents
 
 
 router = APIRouter()
 
 
 @router.post("/bulk_load")
-async def bulk_load(file: UploadFile = File(...)):
+async def bulk_load(file: UploadFile = File(...),
+                    text_key: str = Form(...)):
     data = await file.read()
-    json_data = json.loads(data)["entry"]
+
+    if file.filename.endswith(".json"):
+        json_data = json.loads(data)["entry"]
+    elif file.filename.endswith(".csv"):
+        json_data = csv_to_dict(data)
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Only JSON and CSV are supported.")
+
     try:
         helpers.bulk(es_client,
                      bulk_load_fhir_data(json_data,
-                                         settings.elasticsearch.index_name))
+                                         text_key,
+                                         embedding_model=embedding_model,
+                                         index_name=settings.elasticsearch.index_name))
         logger.info(f"Bulk load completed for file: {file.filename}")
         return {"status": "success", "filename": file.filename}
     except Exception as e:

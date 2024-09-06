@@ -1,5 +1,5 @@
 from sentence_transformers import SentenceTransformer
-from config.settings import settings
+from app.config.settings import settings
 
 
 def get_sentence_transformer():

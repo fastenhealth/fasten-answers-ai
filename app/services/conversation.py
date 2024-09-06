@@ -2,8 +2,8 @@ import time
 
 from fastapi.responses import StreamingResponse
 
-from services.llama_client import llm_client
-from config.settings import logger
+from app.services.llama_client import llm_client
+from app.config.settings import logger
 
 
 def process_search_output(search_results):

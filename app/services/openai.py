@@ -12,16 +12,21 @@ class OpenAIHandler:
         tokens = encoding.encode(prompt)
         return len(tokens)
 
-    def get_chat_completion(self, openai_api_key, user_prompt: str, system_prompt: str, answer_json_schema: dict, max_tokens: int = 300, endpoint_url: str = "https://api.openai.com/v1/chat/completions"):
+    def get_chat_completion(self, openai_api_key, user_prompt: str,
+                            system_prompt: str,
+                            answer_json_schema: dict,
+                            max_tokens: int = 300,
+                            endpoint_url: str = "https://api.openai.com/v1/chat/completions"):
         headers = {"Content-Type": "application/json",
                    "Authorization": f"Bearer {openai_api_key}"}
 
         payload = {
             "model": self.model,
             "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-            "response_format": answer_json_schema,
             "max_tokens": max_tokens
         }
+        if answer_json_schema:
+            payload["response_format"] = answer_json_schema
 
         try:
             response = requests.post(
@@ -41,7 +46,7 @@ class OpenAIHandler:
         total_output_tokens = total_openai_requests * tokens_per_response
         output_cost = round(total_output_tokens *
                             (cost_per_million_output_tokens / 1_000_000), 3)
-        total_cost = round(input_cost + output_cost, 2)
+        total_cost = round(input_cost + output_cost, 3)
 
         return {
             "total_cost": total_cost,

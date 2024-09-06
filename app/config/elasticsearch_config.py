@@ -1,6 +1,6 @@
 from elasticsearch import Elasticsearch
 
-from config.settings import settings, logger
+from app.config.settings import settings, logger
 
 
 def get_es_client():

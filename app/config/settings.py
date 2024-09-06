@@ -31,13 +31,14 @@ class ModelsSettings:
 
     def load_prompt(self, file_path: str) -> str:
         with open(file_path, 'r') as file:
-            return file.read().strip()
+            return file.read().strip().replace("\n", " ")
 
 
 class Settings:
     def __init__(self):
         self.elasticsearch = ElasticsearchSettings()
         self.model = ModelsSettings()
+
 
 settings = Settings()
 

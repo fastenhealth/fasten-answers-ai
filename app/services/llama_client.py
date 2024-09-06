@@ -4,7 +4,7 @@ import requests
 import json
 from typing import List
 
-from config.settings import settings, logger
+from app.config.settings import settings, logger
 
 
 class LlamaCppClient:

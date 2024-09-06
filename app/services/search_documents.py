@@ -1,4 +1,4 @@
-from config.settings import settings, logger
+from app.config.settings import settings, logger
 
 
 def search_query(query_text,

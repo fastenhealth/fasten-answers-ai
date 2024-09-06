@@ -1,12 +1,13 @@
+import csv
 import os
 from datetime import datetime
 
 from tqdm import tqdm
 
-from services.openai import OpenAIHandler
+from app.services.openai import OpenAIHandler
 
 
-def process_prompts_and_calculate_costs(
+def calculate_costs(
     system_prompt: str,
     user_prompts: list[dict],
     cost_per_million_input_tokens: float,
@@ -35,7 +36,7 @@ def process_prompts_and_calculate_costs(
 
     for user_prompt in user_prompts:
         tokens_for_this_prompt = openai_handler.get_total_tokens_from_prompt(
-            user_prompt)
+            user_prompt["resource"])
 
         total_input_tokens += tokens_for_this_prompt
 
@@ -57,24 +58,29 @@ def process_prompts_and_calculate_costs(
 
 
 def ensure_data_directory_exists():
-    data_dir = "data"
+    project_root = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), '..'))
+    data_dir = os.path.join(project_root, "data")
+
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
     return data_dir
 
 
-def generate_output_filename():
+def generate_output_filename(task: str):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"openai_responses_{timestamp}.csv"
+    return f"openai_responses_{task}_{timestamp}.csv"
 
 
 def process_prompts_and_save_responses(
     system_prompt: str,
     user_prompts: list[dict],
     openai_api_key: str,
+    task: str,
     model: str = "gpt-4o-mini-2024-07-18",
-    max_tokens: int = 300
-):
+    max_tokens: int = 300,
+    answer_json_schema=None
+) -> str:
     """
     Process a list of user prompts, generate completions for each one, and save the results to a CSV file.
 
@@ -93,39 +99,34 @@ def process_prompts_and_save_responses(
     # Verify if data dir exists
     data_dir = ensure_data_directory_exists()
 
-    # Generar el nombre del archivo de salida
-    output_file = os.path.join(data_dir, generate_output_filename())
+    # Output filename
+    output_file = os.path.join(data_dir, generate_output_filename(task=task))
 
-    # Determinar si el archivo ya existe para escribir el encabezado solo una vez
-    file_exists = os.path.isfile(output_file)
+    with open(output_file, newline='', mode='w') as file:
+        writer = csv.DictWriter(
+            file, fieldnames=['resource_id', 'resource_type', 'original_resource', 'openai_summary'])
+        writer.writeheader()
 
-    # Abrir el archivo una sola vez fuera del bucle
-    with open(output_file, mode='a', newline='') as file:
-        writer = csv.DictWriter(file, fieldnames=['request', 'answer'])
+        for user_prompt in tqdm(user_prompts, total=len(user_prompts), desc="Generating completions"):
+            user_content = user_prompt['resource']        
 
-        # Escribir el encabezado solo si el archivo no existe
-        if not file_exists:
-            writer.writeheader()
-
-        # Iterar sobre cada prompt y obtener las respuestas de OpenAI
-        for user_prompt in tqdm(user_prompts, desc="Generating completions"):
-            user_content = user_prompt['content']
-            request = f"System: {system_prompt}\nUser: {user_content}"
-
-            # Generar la respuesta de OpenAI para el prompt
+            # Openai requests
             completion = openai_handler.get_chat_completion(
                 openai_api_key=openai_api_key,
                 user_prompt=user_content,
                 system_prompt=system_prompt,
-                answer_json_schema={},  # Ajusta el esquema si es necesario
+                answer_json_schema=answer_json_schema,
                 max_tokens=max_tokens
             )
 
             if completion:
                 answer = completion['choices'][0]['message']['content']
-                writer.writerow({'request': request, 'answer': answer})
+                writer.writerow(
+                    {'resource_id': user_prompt['resource_id'],
+                     'resource_type': user_prompt['resource_type'],
+                     'original_resource': user_content,
+                     'openai_summary': answer})
 
-        # Al terminar, asegurarse de que todo se haya escrito al archivo
-        file.flush()
+            file.flush()
 
-    print(f"Responses saved to {output_file}")
+    return output_file

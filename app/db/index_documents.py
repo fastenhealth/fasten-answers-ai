@@ -10,7 +10,7 @@ def bulk_load_fhir_data(data: list[dict],
         resource_type = value.get("resource_type")
         resource = value.get(text_key)
         embedding = embedding_model.encode(resource)
-        
+
         metadata = {
             "resource_id": resource_id,
             "resource_type": resource_type

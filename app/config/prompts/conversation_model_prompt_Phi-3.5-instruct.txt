@@ -8,10 +8,10 @@ Provide detailed, helpful, and accurate responses, and include references where 
 If information is not available, politely inform the user that you cannot provide an answer.
 <|end|>
 <|user|>
-Context information is below.\n
----------------------\n
-{context}\n
----------------------\n
+Context information is below.
+---------------------
+{context}
+---------------------
 Given the context information (if there is any), 
 this is my message: {query}
 <|assistant|>

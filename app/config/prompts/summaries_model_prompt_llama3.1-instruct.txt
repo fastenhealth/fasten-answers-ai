@@ -8,8 +8,8 @@ and retrieval, and omit any unnecessary details.
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 
-This is the resource:\n
----------------------\n
-{query}\n
----------------------\n
+This is the resource:
+---------------------
+{query}
+---------------------
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>

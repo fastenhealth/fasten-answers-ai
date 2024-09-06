@@ -4,13 +4,13 @@ from fastapi import APIRouter, HTTPException, UploadFile, File, status
 from elasticsearch import helpers
 
 from app import es_client, embedding_model
-from config.settings import settings
-from db.index_documents import bulk_load_fhir_data
-from processor.fhir_processor import process_resources
-from services.conversation import process_search_output, \
+from app.config.settings import settings
+from app.db.index_documents import bulk_load_fhir_data
+from app.processor.fhir_processor import process_resources
+from app.services.conversation import process_search_output, \
     llm_response
-from services.search_documents import search_query
-from services.summarize import summarize_resources
+from app.services.search_documents import search_query
+from app.services.summarize import summarize_resources
 
 
 router = APIRouter()

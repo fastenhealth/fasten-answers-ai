@@ -10,10 +10,10 @@ If information is not available, politely inform the user that you cannot provid
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 
-Context information is below.\n
----------------------\n
-{context}\n
----------------------\n
+Context information is below.
+---------------------
+{context}
+---------------------
 Given the context information (if there is any), 
 this is my message: {query} 
 <|eot_id|><|start_header_id|>assistant<|end_header_id|>

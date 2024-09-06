@@ -1,5 +1,5 @@
-from config.settings import logger
-from services.llama_client import llm_client
+from app.config.settings import logger
+from app.services.llama_client import llm_client
 
 
 def summarize_resources(resources: list[dict],
