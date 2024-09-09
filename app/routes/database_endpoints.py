@@ -54,10 +54,13 @@ async def delete_all_documents(index_name: str):
 
 
 @router.get("/get_all_documents")
-async def get_all_documents(index_name: str = settings.elasticsearch.index_name):
+async def get_all_documents(index_name: str = settings.elasticsearch.index_name,
+                            size: int = 2000):
     try:
         documents = fetch_all_documents(
-            index_name=index_name, es_client=es_client)
+            index_name=index_name, 
+            es_client=es_client,
+            size=size)
         return documents
     except Exception as e:
         logger.error(f"Error retrieving documents: {str(e)}")

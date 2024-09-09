@@ -1,4 +1,4 @@
-from app.config.settings import settings, logger
+from app.config.settings import settings
 
 
 def search_query(
@@ -10,8 +10,8 @@ def search_query(
     text_boost=0.25,
     embedding_boost=4.0,
 ):
-    logger.info(f"Searching for query: {query_text}")
-    query_embedding = embedding_model.encode(query_text).tolist()
+    query_embedding = embedding_model.encode(query_text,
+                                             show_progress_bar=False).tolist()
     query_body = {
         "size": k,
         "query": {
@@ -41,7 +41,6 @@ def search_query(
     }
     response = es_client.search(index=index_name, body=query_body)
     results = response["hits"]["hits"]
-    logger.info(f"Found {len(results)} results for the query: {query_text}")
     return [
         {
             "score": result["_score"],
@@ -52,13 +51,22 @@ def search_query(
     ]
 
 
-def fetch_all_documents(es_client, index_name=settings.elasticsearch.index_name):
-    query_body = {"query": {"match_all": {}}, "_source": ["content", "metadata"]}
+def fetch_all_documents(es_client,
+                        index_name=settings.elasticsearch.index_name,
+                        size: int = 2000):
+    query_body = {"query":
+                  {
+                      "match_all": {}
+                  },
+                  "_source": ["content", "metadata"],
+                  "size": size
+                  }
 
     response = es_client.search(index=index_name, body=query_body)
     results = response["hits"]["hits"]
 
     return [
-        {"id": result["_id"], "content": result["_source"].get("content", ""), "metadata": result["_source"].get("metadata", {})}
+        {"id": result["_id"], "content": result["_source"].get(
+            "content", ""), "metadata": result["_source"].get("metadata", {})}
         for result in results
     ]

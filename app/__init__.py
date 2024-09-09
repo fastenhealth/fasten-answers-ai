@@ -14,10 +14,12 @@ def create_app():
     from app.routes.database_endpoints import router as database_router
     from app.routes.llm_endpoints import router as llm_router
     from app.routes.openai_endpoints import router as openai_router
+    from app.routes.evaluation_endpoints import router as evaluation_router
 
     app.include_router(database_router, prefix="/database")
     app.include_router(llm_router, prefix="/generation")
     app.include_router(openai_router, prefix="/openai")
+    app.include_router(evaluation_router, prefix="/evaluation")
 
     return app
 
