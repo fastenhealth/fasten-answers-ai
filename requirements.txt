@@ -1,4 +1,6 @@
 aiohttp==3.10.5
+boto3==1.35.15
+clearml==1.16.4 
 elasticsearch==8.15.0
 fastapi==0.112.2
 sentence-transformers==3.0.1
@@ -7,5 +9,6 @@ PyPDF2==3.0.1
 python-multipart==0.0.9
 requests==2.32.3
 ruff==0.6.3
+tqdm==4.66.5
 tiktoken==0.7.0
 uvicorn==0.30.6

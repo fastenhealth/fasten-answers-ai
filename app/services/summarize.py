@@ -1,14 +1,10 @@
-from config.settings import logger
-from services.llama_client import llm_client
+from app.config.settings import logger
+from app.services.llama_client import llm_client
 
 
-def summarize_resources(resources: list[dict],
-                        stream: bool = False
-                        ):
+def summarize_resources(resources: list[dict], stream: bool = False):
     for resource in resources:
-        response = llm_client.chat(query=resource,
-                                   stream=stream,
-                                   task="summarize")
+        response = llm_client.chat(query=resource, stream=stream, task="summarize")
         summary = response.get("content")
         tokens_evaluated = response.get("tokens_evaluated")
         tokens_predicted = response.get("tokens_predicted")
@@ -21,7 +17,6 @@ def summarize_resources(resources: list[dict],
         resource["prompt_ms"] = prompt_ms
         resource["predicted_ms"] = predicted_ms
 
-        logger.info(
-            f"This is the summary: {summary}")
+        logger.info(f"This is the summary: {summary}")
 
     return resources

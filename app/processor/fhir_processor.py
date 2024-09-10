@@ -46,15 +46,13 @@ def extract_text(resource):
             content_type = attachment.get("contentType", "")
             if "data" in attachment and "text/" in content_type:
                 # Decode base64 and extract text
-                text = extract_text_from_base64(
-                    attachment["data"], content_type)
+                text = extract_text_from_base64(attachment["data"], content_type)
                 if text:
                     attachment["data"] = text
     elif resource.get("resourceType") == "Binary":
         content_type = resource.get("contentType", "")
         if "text/" in content_type or "application/pdf" in content_type:
-            text = extract_text_from_base64(
-                resource.get("data", ""), content_type)
+            text = extract_text_from_base64(resource.get("data", ""), content_type)
             if text:
                 resource["data"] = text
     elif resource.get("resourceType") == "DiagnosticReport":
@@ -71,8 +69,7 @@ def extract_text(resource):
             content_type = attachment.get("contentType", "")
             if "data" in attachment and "text/" in content_type:
                 # Decode base64 and extract text
-                text = extract_text_from_base64(
-                    attachment["data"], content_type)
+                text = extract_text_from_base64(attachment["data"], content_type)
                 if text:
                     attachment["data"] = text
 
@@ -80,8 +77,7 @@ def extract_text(resource):
 
 
 def remove_urls_from_fhir(data):
-    url_pattern = re.compile(
-        r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
+    url_pattern = re.compile(r"http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+")
 
     if isinstance(data, dict):
         return {key: remove_urls_from_fhir(value) for key, value in data.items()}
@@ -93,8 +89,7 @@ def remove_urls_from_fhir(data):
         return data
 
 
-def process_resources(data: dict,
-                      remove_urls: bool) -> list[dict]:
+def process_resources(data: dict, remove_urls: bool) -> list[dict]:
     resources = []
 
     for entry in data.get("entry", []):
@@ -110,8 +105,6 @@ def process_resources(data: dict,
             resource_id = resource.get("id")
             text = json.dumps(resource).replace("\\", "")
 
-            resources.append({"resource_id": resource_id,
-                              "resource_type": resource_type,
-                              "resource": text})
+            resources.append({"resource_id": resource_id, "resource_type": resource_type, "resource": text})
 
     return resources

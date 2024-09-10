@@ -6,8 +6,8 @@ attributes. Prioritize essential data for efficient storage
 and retrieval, and omit any unnecessary details.
 <|end|>
 <|user|>
-This is the resource:\n
----------------------\n
-{query}\n
----------------------\n
+This is the resource:
+---------------------
+{query}
+---------------------
 <|assistant|>

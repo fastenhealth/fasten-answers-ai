@@ -15,20 +15,25 @@ class ModelsSettings:
         # Base dir
         base_dir = os.path.dirname(os.path.abspath(__file__))
         # Embedding model
-        self.embedding_model_name = os.getenv(
-            "EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
+        self.embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
         # LLM host
         self.llm_host = os.getenv("LLAMA_HOST", "http://localhost:8090")
         # Conversation prompts
         self.conversation_model_prompt = self.load_prompt(
-            os.path.join(base_dir, "prompts/conversation_model_prompt_Phi-3.5-instruct.txt"))
+            os.path.join(base_dir, "prompts/conversation_model_prompt_Phi-3.5-instruct.txt")
+        )
         # Summaries prompts
         self.summaries_model_prompt = self.load_prompt(
-            os.path.join(base_dir, "prompts/summaries_model_prompt_Phi-3.5-instruct.txt"))
+            os.path.join(base_dir, "prompts/summaries_model_prompt_Phi-3.5-instruct.txt")
+        )
+        # Summaries openai system prompt
+        self.summaries_openai_system_prompt = self.load_prompt(
+            os.path.join(base_dir, "prompts/summaries_openai_system_prompt.txt")
+        )
 
     def load_prompt(self, file_path: str) -> str:
-        with open(file_path, 'r') as file:
-            return file.read().strip()
+        with open(file_path, "r") as file:
+            return file.read().strip().replace("\n", " ")
 
 
 class Settings:
@@ -36,8 +41,10 @@ class Settings:
         self.elasticsearch = ElasticsearchSettings()
         self.model = ModelsSettings()
 
+
 settings = Settings()
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("elastic_transport").setLevel(logging.WARNING)
