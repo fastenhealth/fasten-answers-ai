@@ -49,19 +49,15 @@ class LlamaCppClient:
         data = {"prompt": prompt, **params}
 
         logger.info(f"Sending request to llama.cpp server with prompt: {prompt}")
-
         return data
 
-    def chat(self, query, stream, context=None, params=None, task="conversate") -> dict:
+    def chat(self, prompt, query, stream, context=None, params=None, task="conversate") -> dict:
         params = params or self.DEFAULT_PARAMS.copy()
         params["stream"] = stream
 
-        if task == "conversate":
-            data = self._build_payload(
-                model_prompt=settings.model.conversation_model_prompt, query=query, params=params, context=context
-            )
-        elif task == "summarize":
-            data = self._build_payload(model_prompt=settings.model.summaries_model_prompt, query=query, params=params)
+        data = self._build_payload(
+            model_prompt=prompt, query=query, params=params, context=context
+        )
 
         try:
             if params["stream"]:
@@ -72,17 +68,17 @@ class LlamaCppClient:
             logger.error(f"Request failed: {e}")
             raise
 
-    def chat_parallel(self, contexts, messages, params=None) -> List[dict]:
+    async def chat_parallel(self, prompt, contexts, queries, params=None) -> List[dict]:
         params = params or self.DEFAULT_PARAMS.copy()
 
         payloads = []
-        for context, message in zip(contexts, messages):
-            payloads.append(self._build_payload(context, message, params))
+        for context, query in zip(contexts, queries):
+            payloads.append(self._build_payload(prompt, context=context, query=query, params=params))
 
         logger.info(f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
         url = f"{self.base_url}/completion"
         try:
-            return asyncio.run(self._call_model_parallel(url, payloads))
+            return await self._call_model_parallel(url, payloads)
         except requests.RequestException as e:
             logger.error(f"Parallel requests failed: {e}")
             raise

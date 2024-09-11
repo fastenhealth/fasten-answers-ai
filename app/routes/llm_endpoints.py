@@ -2,6 +2,7 @@ import json
 
 from fastapi import APIRouter, HTTPException, UploadFile, File, status
 from elasticsearch import helpers
+import pandas as pd
 
 from app import es_client, embedding_model
 from app.config.settings import settings
@@ -52,11 +53,13 @@ async def summarize(
         else:
             resources_processed = process_resources(
                 data=resources, remove_urls=remove_urls)
-        resources_summarized = summarize_resources(resources_processed, stream)
+        resources_summarized = await summarize_resources(resources_processed, stream)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                             detail=f"Error during processing: {str(e)}")
     # Save resources
+    pd.DataFrame(resources_summarized).to_csv("resources_summarized.csv")
+    return {"HELLO": "WORLD"}
     try:
         helpers.bulk(
             es_client,
