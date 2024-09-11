@@ -3,7 +3,7 @@ import time
 from fastapi.responses import StreamingResponse
 
 from app.services.llama_client import llm_client
-from app.config.settings import logger
+from app.config.settings import logger, settings
 
 
 def process_search_output(search_results):
@@ -25,20 +25,34 @@ def process_search_output(search_results):
     return concatenated_content, resources_id
 
 
-def llm_response(concatenated_context: str, query: str, resources_id: list, stream: bool, params: dict):
+def llm_response(concatenated_context: str,
+                 query: str,
+                 resources_id: list,
+                 stream: bool,
+                 params: dict):
     if stream:
 
         def generate():
             start_time = time.time()
-            for chunk in llm_client.chat(context=concatenated_context, query=query, stream=stream, params=params):
+            for chunk in llm_client.chat(context=concatenated_context,
+                                         query=query,
+                                         stream=stream,
+                                         params=params,
+                                         model_prompt=settings.model.conversation_model_prompt):
                 yield chunk
             elapsed_time = (time.time() - start_time) * 1000
-            logger.info(f"stream_llm_response took {elapsed_time:.2f} milliseconds.")
+            logger.info(
+                f"stream_llm_response took {elapsed_time:.2f} milliseconds.")
 
         return StreamingResponse(generate(), media_type="text/plain")
     else:
         logger.info(stream)
-        response = llm_client.chat(context=concatenated_context, query=query, stream=stream, params=params)
+        response = llm_client.chat(
+            context=concatenated_context,
+            query=query,
+            stream=stream,
+            params=params,
+            model_prompt=settings.model.conversation_model_prompt)
         logger.info(f"Response received: {response}")
         result = {
             "query": query,

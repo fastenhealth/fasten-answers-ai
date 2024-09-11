@@ -1,9 +1,10 @@
 import csv
 import os
-from datetime import datetime
 
 from tqdm import tqdm
 
+from app.processor.files_processor import ensure_data_directory_exists, \
+    generate_output_filename
 from app.services.openai import OpenAIHandler
 
 
@@ -35,11 +36,13 @@ def calculate_costs(
     total_openai_requests = len(user_prompts)
 
     for user_prompt in user_prompts:
-        tokens_for_this_prompt = openai_handler.get_total_tokens_from_prompt(user_prompt["resource"])
+        tokens_for_this_prompt = openai_handler.get_total_tokens_from_prompt(
+            user_prompt["resource"])
 
         total_input_tokens += tokens_for_this_prompt
 
-    total_system_tokens = openai_handler.get_total_tokens_from_prompt(system_prompt) * total_openai_requests
+    total_system_tokens = openai_handler.get_total_tokens_from_prompt(
+        system_prompt) * total_openai_requests
 
     total_input_tokens += total_system_tokens
 
@@ -53,20 +56,6 @@ def calculate_costs(
     )
 
     return total_cost_info
-
-
-def ensure_data_directory_exists():
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    data_dir = os.path.join(project_root, "data")
-
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    return data_dir
-
-
-def generate_output_filename(task: str):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"openai_responses_{task}_{timestamp}.csv"
 
 
 def process_prompts_and_save_responses(
@@ -97,10 +86,12 @@ def process_prompts_and_save_responses(
     data_dir = ensure_data_directory_exists()
 
     # Output filename
-    output_file = os.path.join(data_dir, generate_output_filename(task=task))
+    output_file = os.path.join(data_dir, generate_output_filename(process="openai_responses",
+                                                                  task=task))
 
     with open(output_file, newline="", mode="w") as file:
-        writer = csv.DictWriter(file, fieldnames=["resource_id", "resource_type", "original_resource", "openai_summary"])
+        writer = csv.DictWriter(file, fieldnames=[
+                                "resource_id", "resource_type", "original_resource", "openai_summary"])
         writer.writeheader()
 
         for user_prompt in tqdm(user_prompts, total=len(user_prompts), desc="Generating completions"):

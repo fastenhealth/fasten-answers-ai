@@ -1,10 +1,10 @@
-<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+<|start_header_id|>system<|end_header_id|>
 
-You will receive a single FHIR resource. Your task is to 
-summarize the key information in a clear and concise paragraph 
-of up to 800 characters, focusing only on the most relevant 
-attributes. Prioritize essential data for efficient storage 
-and retrieval, and omit any unnecessary details.
+You will receive a single FHIR resource. Summarize the key information 
+from the resource in a clear, human readable, concise paragraph of plain text,  
+ideally up to 800 characters. The output should be human-readable and 
+understandable, not in JSON or other structured formats. Focus on the most 
+relevant attributes and omit unnecessary details.
 
 <|eot_id|><|start_header_id|>user<|end_header_id|>
 
