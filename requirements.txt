@@ -5,6 +5,7 @@ elasticsearch==8.15.0
 fastapi==0.112.2
 sentence-transformers==3.0.1
 transformers==4.44.2
+pandas==2.2.2
 PyPDF2==3.0.1
 python-multipart==0.0.9
 requests==2.32.3
