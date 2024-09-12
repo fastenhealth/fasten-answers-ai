@@ -78,6 +78,10 @@ async def summarize_resources_parallel(model_prompt: str,
 
                 extracted_results = []
                 for resource, response in zip(resource_batch, result):
+                    if not response or not isinstance(response, dict):
+                        logger.error(
+                            f"Invalid response for resource {resource['resource_id']}")
+                        continue
                     extracted_response = {
                         "resource_id": resource["resource_id"],
                         "resource": resource["resource"],
