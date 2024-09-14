@@ -53,9 +53,6 @@ class LlamaCppClient:
 
         data = {"prompt": prompt, **params}
 
-        logger.info(
-            f"Sending request to llama.cpp server with prompt: {prompt}")
-
         return data
 
     def chat(self,

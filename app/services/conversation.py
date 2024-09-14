@@ -2,11 +2,10 @@ import csv
 import os
 import pandas as pd
 import time
+from tqdm import tqdm
 
-from elasticsearch import helpers
 from fastapi.responses import StreamingResponse
 
-from app.db.index_documents import bulk_load_fhir_data
 from app.services.llama_client import llm_client
 from app.config.settings import logger, settings
 from app.processor.files_processor import ensure_data_directory_exists, \
@@ -15,7 +14,6 @@ from app.services.search_documents import search_query
 
 
 def process_search_output(search_results):
-    logger.info("Processing search results")
     processed_contents = []
     resources_id = []
 
@@ -88,7 +86,7 @@ def batch_generation_synchronous(model_prompt: str,
                                  k: int,
                                  text_boost: float,
                                  embedding_boost: float,
-                                 optional_fields: list[str] = None,                                 
+                                 llm_model: str,
                                  process: str = "local_llm_response",
                                  job: str = "generation_evaluation") -> str:
     """
@@ -103,20 +101,19 @@ def batch_generation_synchronous(model_prompt: str,
 
     # Fieldnames for the CSV
     fieldnames = [
-        "resource_id", "resource", "resource_type", "response",
+        "resource_id_source", "openai_query", "openai_answer",
+        "context", "resources_id_context", "local_llm_model", "model_prompt", "response",
         "tokens_predicted", "tokens_evaluated", "prompt_n", "prompt_ms",
         "prompt_per_token_ms", "prompt_per_second", "predicted_n",
         "predicted_ms", "predicted_per_token_ms", "predicted_per_second"
     ]
-
-    final_results = []
 
     # Open CSV file to write results
     with open(output_file, mode="w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
 
-        for _, row in input_data.iterrows():
+        for _, row in tqdm(input_data.iterrows(), total=len(input_data), desc="Generating responses"):
             user_query = row[question_column]
             # Query
             context = search_query(query_text=user_query,
@@ -128,7 +125,7 @@ def batch_generation_synchronous(model_prompt: str,
             if not context:
                 concatenated_context = "There is no context"
             else:
-                concatenated_context, _ = process_search_output(
+                concatenated_context, resources_id = process_search_output(
                     context)
             # Get answer
             try:
@@ -143,6 +140,13 @@ def batch_generation_synchronous(model_prompt: str,
                     continue
 
                 rag_response = {
+                    "resource_id_source": row["resource_id_source"],
+                    "openai_query": user_query,
+                    "openai_answer": row["openai_answer"],
+                    "context": concatenated_context,
+                    "resources_id_context": resources_id,
+                    "local_llm_model": llm_model,
+                    "model_prompt": model_prompt,
                     "response": response["content"],
                     "tokens_predicted": response["tokens_predicted"],
                     "tokens_evaluated": response["tokens_evaluated"],
@@ -156,27 +160,11 @@ def batch_generation_synchronous(model_prompt: str,
                     "predicted_per_second": response["timings"]["predicted_per_second"]
                 }
 
-                if optional_fields and rag_response:
-                    for field in optional_fields:
-                        rag_response[field] = row[field]
-
                 writer.writerow(rag_response)
-                final_results.append(rag_response)
 
                 # Flush the file after each batch
                 file.flush()
 
             except Exception as e:
                 logger.error(f"Error processing batch: {str(e)}")
-
-    # Load results into Elasticsearch
-    helpers.bulk(
-        es_client,
-        bulk_load_fhir_data(
-            data=final_results,
-            text_key="summary",
-            embedding_model=embedding_model,
-            index_name=settings.elasticsearch.index_name,
-        )
-    )
     return output_file

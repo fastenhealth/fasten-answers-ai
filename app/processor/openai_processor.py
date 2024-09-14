@@ -5,6 +5,7 @@ import os
 
 from tqdm import tqdm
 
+from app.config.settings import logger
 from app.processor.files_processor import ensure_data_directory_exists, \
     generate_output_filename
 from app.services.openai import OpenAIHandler
@@ -124,14 +125,14 @@ def process_prompts_and_save_responses(
     return output_file
 
 
-def jsonl_dataset_to_dataframe(jsonl_file, output_csv) -> pd.DataFrame:
+def jsonl_dataset_to_dataframe(jsonl_file: str) -> pd.DataFrame:
     """
     Read evaluation dataset in JSONL format from Openai
     """
     openai_responses = []
-    with open(jsonl_file, "r") as f:
-        for line in f:
-            openai_responses.append(json.loads(line))
+
+    for line in jsonl_file.splitlines():
+        openai_responses.append(json.loads(line))
 
     results = []
 
@@ -145,10 +146,13 @@ def jsonl_dataset_to_dataframe(jsonl_file, output_csv) -> pd.DataFrame:
             question = questions_and_answers["question"]
             reference_answer = questions_and_answers["answer"]
         except json.JSONDecodeError as e:
+            logger.error(
+                f"JSONDecodeError: Failed to parse content for resource ID {resource_id}. Error: {e}")
             continue
 
         result = {"resource_id_source": resource_id,
-                  "openai_query": question, "openai_answer": reference_answer}
+                  "openai_query": question,
+                  "openai_answer": reference_answer}
         results.append(result)
 
     return pd.DataFrame(results)
