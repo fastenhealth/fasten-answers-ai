@@ -18,8 +18,9 @@ router = APIRouter()
 async def answer_query(
     query: str, k: int = 5, params=None, stream: bool = False, text_boost: float = 0.25, embedding_boost: float = 4.0
 ):
-    results = search_query(query, embedding_model, es_client, k=k,
-                           text_boost=text_boost, embedding_boost=embedding_boost)
+    results = search_query(
+        query, embedding_model, es_client, k=k, text_boost=text_boost, embedding_boost=embedding_boost, rerank_top_k=0
+    )
     if not results:
         concatenated_content = "There is no context"
     else:
@@ -42,7 +43,7 @@ async def summarize_and_load(
     except json.JSONDecodeError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
-    # Process input file
+    # Process file and summarize resources
     try:
         limit = 1 if limit <= 0 else limit
         if limit:

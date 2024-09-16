@@ -13,7 +13,8 @@ def evaluate_resources_summaries_retrieval(
     qa_references: list[dict],
     search_text_boost: int = 1,
     search_embedding_boost: int = 1,
-    k: int = 5
+    k: int = 5,
+    rerank_top_k: int = 0,
 ) -> dict:
     # Initialize counters and sums for metrics
     total_questions = 0
@@ -29,8 +30,7 @@ def evaluate_resources_summaries_retrieval(
         reference_resource_id = response["custom_id"]
         content = response["response"]["body"]["choices"][0]["message"]["content"]
 
-        questions_and_answers = json.loads(
-            content)["questions_and_answers"]
+        questions_and_answers = json.loads(content)["questions_and_answers"]
 
         if len(questions_and_answers) > 0:
             # Sample one random question per resource_id to evaluate
@@ -42,13 +42,15 @@ def evaluate_resources_summaries_retrieval(
                     total_questions += 1
 
                     # Query question
-                    search_results = search_query(question,
-                                                  embedding_model,
-                                                  es_client,
-                                                  k=k,
-                                                  text_boost=search_text_boost,
-                                                  embedding_boost=search_embedding_boost)
-
+                    search_results = search_query(
+                        question,
+                        embedding_model,
+                        es_client,
+                        k=k,
+                        text_boost=search_text_boost,
+                        embedding_boost=search_embedding_boost,
+                        rerank_top_k=rerank_top_k,
+                    )
                     # Evaluate if any returned chunk belongs to the correct resource_id
                     found = False
                     rank = 0
@@ -59,7 +61,7 @@ def evaluate_resources_summaries_retrieval(
 
                     if search_results != {"detail": "Not Found"}:
                         for i, result in enumerate(search_results):
-                            if result["metadata"]["resource_id"] == reference_resource_id:
+                            if result.metadata["resource_id"] == reference_resource_id:
                                 if not found:
                                     total_contexts_found += 1
                                     rank = i + 1
@@ -67,11 +69,10 @@ def evaluate_resources_summaries_retrieval(
                                     found = True
                                 retrieved_relevant_chunks += 1
                     elif search_results == {"detail": "Not Found"}:
-                        search_results = {}
+                        search_results = []
 
                     # Calculate precision and recall for this specific question
-                    precision = retrieved_relevant_chunks / \
-                        len(search_results) if len(search_results) > 0 else 0
+                    precision = retrieved_relevant_chunks / len(search_results) if len(search_results) > 0 else 0
                     recall = retrieved_relevant_chunks / relevant_chunks if relevant_chunks > 0 else 0
 
                     precision_sum += precision
@@ -81,16 +82,11 @@ def evaluate_resources_summaries_retrieval(
                         position_sum += rank
 
     # Calculate final metrics
-    retrieval_accuracy = round(
-        total_contexts_found / total_questions, 3) if total_questions > 0 else 0
-    average_position = round(
-        position_sum / total_contexts_found, 3) if total_contexts_found > 0 else 0
-    mrr = round(reciprocal_rank_sum / total_questions,
-                3) if total_questions > 0 else 0
-    average_precision = round(
-        precision_sum / total_questions, 3) if total_questions > 0 else 0
-    average_recall = round(recall_sum / total_questions,
-                           3) if total_questions > 0 else 0
+    retrieval_accuracy = round(total_contexts_found / total_questions, 3) if total_questions > 0 else 0
+    average_position = round(position_sum / total_contexts_found, 3) if total_contexts_found > 0 else 0
+    mrr = round(reciprocal_rank_sum / total_questions, 3) if total_questions > 0 else 0
+    average_precision = round(precision_sum / total_questions, 3) if total_questions > 0 else 0
+    average_recall = round(recall_sum / total_questions, 3) if total_questions > 0 else 0
 
     return {
         # The percentage of questions for which the system successfully retrieved at least one relevant chunk.

@@ -8,18 +8,19 @@ from fastapi.responses import StreamingResponse
 
 from app.services.llama_client import llm_client
 from app.config.settings import logger, settings
+from app.data_models.search_result import SearchResult
 from app.processor.files_processor import ensure_data_directory_exists, \
     generate_output_filename
 from app.services.search_documents import search_query
 
 
-def process_search_output(search_results):
+def process_search_output(search_results: list[SearchResult]):
     processed_contents = []
     resources_id = []
 
     for result in search_results:
-        content = result["content"]
-        resource_id = result["metadata"]["resource_id"]
+        content = result.content
+        resource_id = result.metadata["resource_id"]
 
         processed_contents.append(content.replace("\\", ""))
         resources_id.append(resource_id)

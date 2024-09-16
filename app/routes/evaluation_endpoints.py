@@ -23,28 +23,29 @@ router = APIRouter()
 
 
 @router.post("/evaluate_retrieval")
-async def evaluate_retrieval(file: UploadFile = File(...),
-                             index_name: str = Form(
-                                 settings.elasticsearch.index_name),
-                             size: int = Form(2000),
-                             search_text_boost: float = Form(1),
-                             search_embedding_boost: float = Form(1),
-                             k: int = Form(5),
-                             urls_in_resources: bool = Form(None),
-                             questions_with_ids_and_dates: str = Form(None),
-                             chunk_size: int = Form(None),
-                             chunk_overlap: int = Form(None),
-                             clearml_track_experiment: bool = Form(False),
-                             clearml_experiment_name: str = Form(
-                                 "Retrieval evaluation"),
-                             clearml_project_name: str = Form("Fasten")):
+async def evaluate_retrieval(
+    file: UploadFile = File(...),
+    index_name: str = Form(settings.elasticsearch.index_name),
+    size: int = Form(2000),
+    search_text_boost: float = Form(1),
+    search_embedding_boost: float = Form(1),
+    k: int = Form(5),
+    rerank_top_k: int = Form(0),
+    urls_in_resources: bool = Form(None),
+    questions_with_ids_and_dates: str = Form(None),
+    chunk_size: int = Form(None),
+    chunk_overlap: int = Form(None),
+    clearml_track_experiment: bool = Form(False),
+    clearml_experiment_name: str = Form("Retrieval evaluation"),
+    clearml_project_name: str = Form("Fasten"),
+):
     # Read and process reference questions and answers in JSONL
     try:
         qa_references = []
 
         file_data = await file.read()
 
-        for line in file_data.decode('utf-8').splitlines():
+        for line in file_data.decode("utf-8").splitlines():
             qa_references.append(json.loads(line))
     except json.JSONDecodeError:
         raise HTTPException(
@@ -52,9 +53,7 @@ async def evaluate_retrieval(file: UploadFile = File(...),
     # Count total chunks by resource in database
     try:
         documents = fetch_all_documents(
-            index_name=index_name,
-            es_client=es_client,
-            size=size)
+            index_name=index_name, es_client=es_client, size=size)
         id, counts = np.unique([resource["metadata"]["resource_id"]
                                for resource in documents], return_counts=True)
         resources_counts = dict(zip(id, counts))
@@ -69,10 +68,11 @@ async def evaluate_retrieval(file: UploadFile = File(...),
                 "search_text_boost": search_text_boost,
                 "search_embedding_boost": search_embedding_boost,
                 "k": k,
+                "rerank_top_k": rerank_top_k,
                 "urls_in_resources": urls_in_resources,
                 "questions_with_ids_and_dates": questions_with_ids_and_dates,
                 "chunk_size": chunk_size,
-                "chunk_overlap": chunk_overlap
+                "chunk_overlap": chunk_overlap,
             }
             unique_task_name = f"{clearml_experiment_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             task = Task.init(project_name=clearml_project_name,
@@ -86,7 +86,9 @@ async def evaluate_retrieval(file: UploadFile = File(...),
             qa_references=qa_references,
             search_text_boost=search_text_boost,
             search_embedding_boost=search_embedding_boost,
-            k=k)
+            k=k,
+            rerank_top_k=rerank_top_k,
+        )
 
         # Upload metrics and close task
         if task:
@@ -103,39 +105,36 @@ async def evaluate_retrieval(file: UploadFile = File(...),
                             detail=f"Error during retrieval evaluation: {str(e)}")
 
 
-router = APIRouter()
-
-
 @router.post("/evaluate_generation")
-async def evaluate_generation(file: UploadFile = File(...),
-                              openai_api_key: str = Form(...),
-                              openai_model: str = Form(
-                                  "gpt-4o-mini-2024-07-18"),
-                              max_tokens: int = Form(400),
-                              # Can be 'correctness' or 'faithfulness'
-                              evaluation_type: str = Form(...),
-                              query_column: str = Form("openai_query"),
-                              reference_answer_column: str = Form(
-                                  "openai_answer"),
-                              generated_answer_column: str = Form("response"),
-                              resource_id_column: str = Form(
-                                  "resource_id_source"),
-                              contexts_column: str = Form("context"),
-                              correctness_threshold: float = Form(4.0),
-                              process: str = Form("openai_response"),
-                              job: str = Form("evaluation_correctness"),
-                              # Experiment parameters
-                              search_text_boost: float = Form(1),
-                              search_embedding_boost: float = Form(1),
-                              k: int = Form(5),
-                              urls_in_resources: bool = Form(None),
-                              questions_with_ids_and_dates: str = Form(None),
-                              chunk_size: int = Form(None),
-                              chunk_overlap: int = Form(None),
-                              clearml_track_experiment: bool = Form(False),
-                              clearml_experiment_name: str = Form(
-                                  "Evaluation"),
-                              clearml_project_name: str = Form("Fasten")):
+async def evaluate_generation(
+    file: UploadFile = File(...),
+    openai_api_key: str = Form(...),
+    openai_model: str = Form(
+        "gpt-4o-mini-2024-07-18"),
+    max_tokens: int = Form(400),
+    # Can be 'correctness' or 'faithfulness'
+    evaluation_type: str = Form(...),
+    query_column: str = Form("openai_query"),
+    reference_answer_column: str = Form(
+        "openai_answer"),
+    generated_answer_column: str = Form("response"),
+    resource_id_column: str = Form(
+        "resource_id_source"),
+    contexts_column: str = Form("context"),
+    correctness_threshold: float = Form(4.0),
+    process: str = Form("openai_response"),
+    job: str = Form("evaluation_correctness"),
+    # Experiment parameters
+    search_text_boost: float = Form(1),
+    search_embedding_boost: float = Form(1),
+    k: int = Form(5),
+    urls_in_resources: bool = Form(None),
+    questions_with_ids_and_dates: str = Form(None),
+    chunk_size: int = Form(None),
+    chunk_overlap: int = Form(None),
+    clearml_track_experiment: bool = Form(False),
+    clearml_experiment_name: str = Form("Evaluation"),
+        clearml_project_name: str = Form("Fasten")):
     try:
         # Read csv
         data = await file.read()

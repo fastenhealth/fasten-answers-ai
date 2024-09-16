@@ -23,8 +23,7 @@ async def bulk_load(file: UploadFile = File(...), text_key: str = Form(...)):
         json_data = csv_to_dict(data)
 
     else:
-        raise HTTPException(
-            status_code=400, detail="Unsupported file format. Only JSON and CSV are supported.")
+        raise HTTPException(status_code=400, detail="Unsupported file format. Only JSON and CSV are supported.")
 
     try:
         helpers.bulk(
@@ -43,33 +42,25 @@ async def bulk_load(file: UploadFile = File(...), text_key: str = Form(...)):
 @router.delete("/delete_all_documents")
 async def delete_all_documents(index_name: str):
     try:
-        es_client.delete_by_query(index=index_name, body={
-                                  "query": {"match_all": {}}})
+        es_client.delete_by_query(index=index_name, body={"query": {"match_all": {}}})
         logger.info(f"All documents deleted from index '{index_name}'")
         return {"status": "success", "message": f"All documents deleted from index '{index_name}'"}
     except Exception as e:
         logger.error(f"Failed to delete documents: {str(e)}")
-        raise HTTPException(
-            status_code=500, detail=f"Failed to delete documents: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete documents: {str(e)}")
 
 
 @router.get("/get_all_documents")
-async def get_all_documents(index_name: str = settings.elasticsearch.index_name,
-                            size: int = 2000):
+async def get_all_documents(index_name: str = settings.elasticsearch.index_name, size: int = 2000):
     try:
-        documents = fetch_all_documents(
-            index_name=index_name, 
-            es_client=es_client,
-            size=size)
+        documents = fetch_all_documents(index_name=index_name, es_client=es_client, size=size)
         return documents
     except Exception as e:
         logger.error(f"Error retrieving documents: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error retrieving documents: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error retrieving documents: {str(e)}")
 
 
 @router.get("/search")
 async def search_documents(query: str, k: int = 5, text_boost: float = 0.25, embedding_boost: float = 4.0):
-    results = search_query(query, embedding_model, es_client, k=k,
-                           text_boost=text_boost, embedding_boost=embedding_boost)
+    results = search_query(query, embedding_model, es_client, k=k, text_boost=text_boost, embedding_boost=embedding_boost)
     return results
