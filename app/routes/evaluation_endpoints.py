@@ -103,147 +103,70 @@ async def evaluate_retrieval(file: UploadFile = File(...),
                             detail=f"Error during retrieval evaluation: {str(e)}")
 
 
-@router.post("/evaluate_correctness")
-async def evaluate_correctness(file: UploadFile = File(...),
-                               openai_api_key: str = Form(...),
-                               openai_model: str = Form("gpt-4o-2024-08-06"),
-                               max_tokens: int = Form(400),
-                               correctness_threshold: float = Form(4.0),
-                               query_column: str = Form("openai_query"),
-                               reference_answer_column: str = Form(
-                                   "openai_answer"),
-                               generated_answer_column: str = Form("response"),
-                               resource_id_column: str = Form(
-                                   "resource_id_source"),
-                               process: str = Form("openai_response"),
-                               job: str = Form("correctness_evaluation"),
-                               # Experiment parameters
-                               search_text_boost: float = Form(1),
-                               search_embedding_boost: float = Form(1),
-                               k: int = Form(5),
-                               urls_in_resources: bool = Form(None),
-                               questions_with_ids_and_dates: str = Form(None),
-                               chunk_size: int = Form(None),
-                               chunk_overlap: int = Form(None),
-                               clearml_track_experiment: bool = Form(False),
-                               clearml_experiment_name: str = Form(
-                                   "Correctness evaluation"),
-                               clearml_project_name: str = Form("Fasten")):
-    # Read and create output directory and file
+router = APIRouter()
+
+
+@router.post("/evaluate_generation")
+async def evaluate_generation(file: UploadFile = File(...),
+                              openai_api_key: str = Form(...),
+                              openai_model: str = Form(
+                                  "gpt-4o-mini-2024-07-18"),
+                              max_tokens: int = Form(400),
+                              # Can be 'correctness' or 'faithfulness'
+                              evaluation_type: str = Form(...),
+                              query_column: str = Form("openai_query"),
+                              reference_answer_column: str = Form(
+                                  "openai_answer"),
+                              generated_answer_column: str = Form("response"),
+                              resource_id_column: str = Form(
+                                  "resource_id_source"),
+                              contexts_column: str = Form("context"),
+                              correctness_threshold: float = Form(4.0),
+                              process: str = Form("openai_response"),
+                              job: str = Form("evaluation_correctness"),
+                              # Experiment parameters
+                              search_text_boost: float = Form(1),
+                              search_embedding_boost: float = Form(1),
+                              k: int = Form(5),
+                              urls_in_resources: bool = Form(None),
+                              questions_with_ids_and_dates: str = Form(None),
+                              chunk_size: int = Form(None),
+                              chunk_overlap: int = Form(None),
+                              clearml_track_experiment: bool = Form(False),
+                              clearml_experiment_name: str = Form(
+                                  "Evaluation"),
+                              clearml_project_name: str = Form("Fasten")):
     try:
+        # Read csv
         data = await file.read()
-        data = pd.read_csv(pd.io.common.BytesIO(data))
-        # Verify required columns
-        required_columns = [query_column, reference_answer_column,
-                            generated_answer_column, resource_id_column]
+        df = pd.read_csv(pd.io.common.BytesIO(data))
+
+        # Check columns
+        if evaluation_type == "correctness":
+            required_columns = [query_column, reference_answer_column,
+                                generated_answer_column, resource_id_column]
+        elif evaluation_type == "faithfulness":
+            required_columns = [generated_answer_column,
+                                contexts_column, resource_id_column]
+        else:
+            raise HTTPException(
+                status_code=400, detail="Invalid evaluation type. Must be 'correctness' or 'faithfulness'.")
+
         missing_columns = [
-            col for col in required_columns if col not in data.columns]
+            col for col in required_columns if col not in df.columns]
         if missing_columns:
             return {"error": f"Missing required columns: {', '.join(missing_columns)}"}
 
-        # Verify if data directory exists
+        # Create output directory
         data_dir = ensure_data_directory_exists()
-        # Create output filename
-        output_file = os.path.join(data_dir, generate_output_filename(
-            process=process, task=job))
+        output_file = os.path.join(
+            data_dir, generate_output_filename(process=process, task=job))
+
     except Exception as e:
-        logger.error(
-            f"Error validating data and creating output file name: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error validating data and creating output file name: : {str(e)}")
-    # Run correctness evaluation
-    try:
-        if clearml_track_experiment:
-            params = {
-                "search_text_boost": search_text_boost,
-                "search_embedding_boost": search_embedding_boost,
-                "k": k,
-                "urls_in_resources": urls_in_resources,
-                "questions_with_ids_and_dates": questions_with_ids_and_dates,
-                "chunk_size": chunk_size,
-                "chunk_overlap": chunk_overlap,
-                "openai_max_tokens": max_tokens,
-                "correctness_threshold": correctness_threshold,
-                "openai_model": openai_model
-            }
-            unique_task_name = f"{clearml_experiment_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            task = Task.init(project_name=clearml_project_name,
-                             task_name=unique_task_name)
-            task.connect(params)
+                            detail=f"Error processing the file: {str(e)}")
 
-        correctness_evaluator = CorrectnessEvaluator(openai_api_key,
-                                                     openai_model,
-                                                     threshold=correctness_threshold,
-                                                     max_tokens=max_tokens)
-        correctnes_mean_score = correctness_evaluator.run_batch_evaluation(
-            df=data,
-            output_file=output_file,
-            query_column=query_column,
-            reference_answer_column=reference_answer_column,
-            generated_answer_column=generated_answer_column,
-            resource_id_column=resource_id_column,
-        )
-        correctness_metrics = {"Correctness Mean Score": correctnes_mean_score}
-        # Upload metrics and close task
-        if task:
-            for series_name, value in correctness_metrics.items():
-                task.get_logger().report_single_value(name=series_name, value=value)
-            task.close()
-
-        return correctness_metrics
-    except Exception as e:
-        logger.error(f"Error during correctness evaluation: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during correctness evaluation: {str(e)}")
-
-
-@router.post("/evaluate_faithfulness")
-async def evaluate_faithfulness(file: UploadFile = File(...),
-                                openai_api_key: str = Form(...),
-                                openai_model: str = Form("gpt-4o-mini-2024-07-18"),
-                                max_tokens: int = Form(400),
-                                generated_answer_column: str = Form(
-                                    "openai_answer"),
-                                contexts_column: str = Form("context"),
-                                resource_id_column: str = Form(
-                                    "resource_id_source"),
-                                process: str = Form("openai_response"),
-                                job: str = Form("faithfulness_evaluation"),
-                                # Experiment parameters
-                                search_text_boost: float = Form(1),
-                                search_embedding_boost: float = Form(1),
-                                k: int = Form(5),
-                                urls_in_resources: bool = Form(None),
-                                questions_with_ids_and_dates: str = Form(None),
-                                chunk_size: int = Form(None),
-                                chunk_overlap: int = Form(None),
-                                clearml_track_experiment: bool = Form(False),
-                                clearml_experiment_name: str = Form(
-                                    "Faithfulness evaluation"),
-                                clearml_project_name: str = Form("Fasten")):
-    # Read and create output directory and file
-    try:
-        data = await file.read()
-        data = pd.read_csv(pd.io.common.BytesIO(data))
-        # Verify required columns
-        required_columns = [generated_answer_column,
-                            contexts_column, resource_id_column]
-        missing_columns = [
-            col for col in required_columns if col not in data.columns]
-        if missing_columns:
-            return {"error": f"Missing required columns: {', '.join(missing_columns)}"}
-
-        # Verify if data directory exists
-        data_dir = ensure_data_directory_exists()
-        # Create output filename
-        output_file = os.path.join(data_dir, generate_output_filename(
-            process=process, task=job))
-    except Exception as e:
-        logger.error(
-            f"Error validating data and creating output file name: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error validating data and creating output file name: : {str(e)}")
-    # Run correctness evaluation
+    # Evaluate generation
     try:
         if clearml_track_experiment:
             params = {
@@ -262,27 +185,33 @@ async def evaluate_faithfulness(file: UploadFile = File(...),
                              task_name=unique_task_name)
             task.connect(params)
 
-        faithfulness_evaluator = FaithfulnessEvaluator(openai_api_key,
-                                                       openai_model,
-                                                       max_tokens=max_tokens)
-        faithfulness_metrics = faithfulness_evaluator.run_batch_evaluation(
-            df=data,
-            output_file=output_file,
-            generated_answer_column=generated_answer_column,
-            contexts_column=contexts_column,
-            resource_id_column=resource_id_column
-        )
-        # Upload metrics and close task
-        if task:
-            for series_name, value in faithfulness_metrics.items():
+        if evaluation_type == "correctness":
+            evaluator = CorrectnessEvaluator(
+                openai_api_key, openai_model, threshold=correctness_threshold, max_tokens=max_tokens)
+            evaluation_metrics = evaluator.run_batch_evaluation(df=df, output_file=output_file,
+                                                                query_column=query_column,
+                                                                reference_answer_column=reference_answer_column,
+                                                                generated_answer_column=generated_answer_column,
+                                                                resource_id_column=resource_id_column)
+        elif evaluation_type == "faithfulness":
+            evaluator = FaithfulnessEvaluator(
+                openai_api_key, openai_model, max_tokens=max_tokens)
+            evaluation_metrics = evaluator.run_batch_evaluation(df=df, output_file=output_file,
+                                                                generated_answer_column=generated_answer_column,
+                                                                contexts_column=contexts_column,
+                                                                resource_id_column=resource_id_column)
+
+        # Upload metrics to clearml
+        if clearml_track_experiment and task:
+            for series_name, value in evaluation_metrics.items():
                 task.get_logger().report_single_value(name=series_name, value=value)
             task.close()
 
-        return faithfulness_metrics
+        return evaluation_metrics
+
     except Exception as e:
-        logger.error(f"Error during correctness evaluation: {str(e)}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during correctness evaluation: {str(e)}")
+                            detail=f"Error during {evaluation_type} evaluation: {str(e)}")
 
 
 @router.post("/batch_generation")
