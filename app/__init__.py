@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from app.config.elasticsearch_config import create_index_if_not_exists
 from app.models.sentence_transformer import get_sentence_transformer
 from app.config.settings import settings
+from app.services.reranking import RerankingService
 
 
 embedding_model = get_sentence_transformer()
 es_client = create_index_if_not_exists(settings.elasticsearch.index_name)
+reranker_service = RerankingService()
 
 
 def create_app():
