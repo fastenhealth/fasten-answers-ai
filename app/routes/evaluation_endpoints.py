@@ -112,6 +112,7 @@ async def evaluate_generation(
     openai_model: str = Form(
         "gpt-4o-mini-2024-07-18"),
     max_tokens: int = Form(400),
+    limit: int = Form(None),
     # Can be 'correctness' or 'faithfulness'
     evaluation_type: str = Form(...),
     query_column: str = Form("openai_query"),
@@ -139,6 +140,9 @@ async def evaluate_generation(
         # Read csv
         data = await file.read()
         df = pd.read_csv(pd.io.common.BytesIO(data))
+        
+        if limit:
+            df = df.iloc[:limit, :]
 
         # Check columns
         if evaluation_type == "correctness":

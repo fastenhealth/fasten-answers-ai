@@ -170,4 +170,4 @@ class CorrectnessEvaluator:
         correctnes_mean_score = round(results_df["score"].sum(
         ) / (len(results_df) * 5), 2)
 
-        return correctnes_mean_score
+        return {"Correctness Mean Score": correctnes_mean_score}
