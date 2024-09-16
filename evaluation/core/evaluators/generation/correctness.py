@@ -88,25 +88,24 @@ class CorrectnessEvaluator:
         """
         try:
             user_prompt = CORRECTNESS_USER_TMPL.format(
-                query=query_str,
-                reference_answer=reference_answer,
-                generated_answer=generated_answer)
+                query=query_str, reference_answer=reference_answer, generated_answer=generated_answer
+            )
 
             system_prompt = CORRECTNESS_SYS_TMPL
 
-            open_ai_response = get_chat_completion(self.openai_api_key,
-                                                   user_prompt,
-                                                   system_prompt,
-                                                   ANSWER_JSON_SCHEMA,
-                                                   model=self.model,
-                                                   max_tokens=self.max_tokens)
-            json_answer = json.loads(open_ai_response.get("choices")[
-                                     0].get("message").get("content"))
+            open_ai_response = get_chat_completion(
+                self.openai_api_key, user_prompt, system_prompt, ANSWER_JSON_SCHEMA, model=self.model, max_tokens=self.max_tokens
+            )
+            json_answer = json.loads(open_ai_response.get("choices")[0].get("message").get("content"))
 
             score = json_answer["score"]
             reasoning = json_answer["reasoning"]
 
-            return {"score": score, "reasoning": reasoning, "passing": score >= self.threshold, }
+            return {
+                "score": score,
+                "reasoning": reasoning,
+                "passing": score >= self.threshold,
+            }
 
         except json.JSONDecodeError as e:
             logging.error(f"Failed to decode JSON response: {e}")
@@ -120,14 +119,15 @@ class CorrectnessEvaluator:
             logging.error(f"An error occurred: {e}")
             return {"score": None, "passing": None, "reasoning": "An unexpected error occurred"}
 
-    def run_batch_evaluation(self,
-                             df: pd.DataFrame,
-                             output_file: str,
-                             query_column: str,
-                             reference_answer_column: str,
-                             generated_answer_column: str,
-                             resource_id_column: str
-                             ):
+    def run_batch_evaluation(
+        self,
+        df: pd.DataFrame,
+        output_file: str,
+        query_column: str,
+        reference_answer_column: str,
+        generated_answer_column: str,
+        resource_id_column: str,
+    ):
         """
         Runs correctness evaluation on a batch of queries, reference answers, and generated answers.
         Saves results incrementally to avoid data loss in case of failure.
@@ -143,9 +143,8 @@ class CorrectnessEvaluator:
         # Determine if the file already exists
         file_exists = os.path.isfile(output_file)
 
-        with open(output_file, mode='a', newline='') as file:
-            writer = csv.DictWriter(
-                file, fieldnames=[resource_id_column, 'score', 'reasoning', 'passing'])
+        with open(output_file, mode="a", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=[resource_id_column, "score", "reasoning", "passing"])
 
             # Write header only if the file does not exist
             if not file_exists:
@@ -154,9 +153,8 @@ class CorrectnessEvaluator:
             try:
                 for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing correctness"):
                     result = self.run_correctness_eval(
-                        row[query_column],
-                        row[reference_answer_column],
-                        row[generated_answer_column])
+                        row[query_column], row[reference_answer_column], row[generated_answer_column]
+                    )
                     result[resource_id_column] = row[resource_id_column]
                     # Write the result to the CSV file
                     writer.writerow(result)
@@ -171,7 +169,6 @@ class CorrectnessEvaluator:
         # Load the results back into a DataFrame and concatenate with the original
         results_df = pd.read_csv(output_file)
 
-        correctnes_mean_score = round(results_df["score"].sum(
-        ) / (len(results_df) * 5), 2)
+        correctnes_mean_score = round(results_df["score"].sum() / (len(results_df) * 5), 2)
 
         return correctnes_mean_score

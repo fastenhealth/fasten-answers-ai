@@ -25,20 +25,17 @@ def get_chat_completion(
     - dict, the response from the OpenAI API.
     """
 
-    headers = {"Content-Type": "application/json",
-               "Authorization": f"Bearer {openai_api_key}"}
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {openai_api_key}"}
 
     payload = {
         "model": model,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
         "response_format": answer_json_schema,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
     }
 
     try:
-        response = requests.post(endpoint_url,
-                                 headers=headers,
-                                 json=payload)
+        response = requests.post(endpoint_url, headers=headers, json=payload)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as http_err:
@@ -49,42 +46,39 @@ def get_chat_completion(
         return None
 
 
-def get_total_tokens_from_string(string: str,
-                                 encoding_name: str = "o200k_base") -> int:
+def get_total_tokens_from_string(string: str, encoding_name: str = "o200k_base") -> int:
     """Returns the number of tokens in a text string."""
     encoding = tiktoken.get_encoding(encoding_name)
     return len(encoding.encode(string))
 
 
-def calculate_total_tokens(df,
-                           query_column,
-                           generated_answer_column,
-                           contexts_column,
-                           reference_answer_column,
-                           system_template: str,
-                           user_template: str,
-                           template_type: str,
-                           encoding_name: str) -> int:
+def calculate_total_tokens(
+    df,
+    query_column,
+    generated_answer_column,
+    contexts_column,
+    reference_answer_column,
+    system_template: str,
+    user_template: str,
+    template_type: str,
+    encoding_name: str,
+) -> int:
     """Calculates the total number of tokens required for the batch based on the type of evaluation."""
     total_tokens = 0
 
     for _, row in df.iterrows():
-        if template_type == 'correctness':
+        if template_type == "correctness":
             user_prompt = user_template.format(
                 query=row[query_column],
                 reference_answer=row[reference_answer_column],
-                generated_answer=row[generated_answer_column]
-            )
-        elif template_type == 'faithfulness':
-            user_prompt = user_template.format(
                 generated_answer=row[generated_answer_column],
-                contexts=row[contexts_column]
             )
+        elif template_type == "faithfulness":
+            user_prompt = user_template.format(generated_answer=row[generated_answer_column], contexts=row[contexts_column])
 
         system_prompt = system_template
         complete_prompt = system_prompt + user_prompt
-        total_tokens += get_total_tokens_from_string(
-            complete_prompt, encoding_name=encoding_name)
+        total_tokens += get_total_tokens_from_string(complete_prompt, encoding_name=encoding_name)
 
     return total_tokens
 
@@ -111,13 +105,11 @@ def calculate_api_costs(
     """
 
     # Calculate input token costs
-    input_cost = round(total_input_tokens *
-                       (cost_per_million_input_tokens / 1_000_000), 3)
+    input_cost = round(total_input_tokens * (cost_per_million_input_tokens / 1_000_000), 3)
 
     # Calculate total output tokens and their costs
     total_output_tokens = total_openai_requests * tokens_per_response
-    output_cost = round(total_output_tokens *
-                        (cost_per_million_output_tokens / 1_000_000), 3)
+    output_cost = round(total_output_tokens * (cost_per_million_output_tokens / 1_000_000), 3)
 
     # Calculate the total cost
     total_cost = round(input_cost + output_cost, 2)
@@ -127,5 +119,5 @@ def calculate_api_costs(
         "input_cost": input_cost,
         "output_cost": output_cost,
         "total_input_tokens": total_input_tokens,
-        "total_output_tokens": total_output_tokens
+        "total_output_tokens": total_output_tokens,
     }

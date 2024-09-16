@@ -5,8 +5,7 @@ from app.data_models.search_result import SearchResult
 
 
 class RerankingService:
-    def __init__(self, model_name='BAAI/bge-reranker-v2-m3'):
-
+    def __init__(self, model_name="BAAI/bge-reranker-v2-m3"):
         self.reranker = FlagReranker(model_name, use_fp16=True)
 
     def rerank(self, query: str, documents: List[SearchResult]) -> List[Tuple[SearchResult, float]]:

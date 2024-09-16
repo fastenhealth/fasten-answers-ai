@@ -19,9 +19,9 @@ router = APIRouter()
 async def answer_query(
     query: str, k: int = 5, params=None, stream: bool = False, text_boost: float = 0.25, embedding_boost: float = 4.0
 ):
-    results = search_query(query, embedding_model, es_client, k=k,
-                           text_boost=text_boost, embedding_boost=embedding_boost,
-                           rerank_top_k=0)
+    results = search_query(
+        query, embedding_model, es_client, k=k, text_boost=text_boost, embedding_boost=embedding_boost, rerank_top_k=0
+    )
     if not results:
         concatenated_content = "There is no context"
     else:
@@ -42,21 +42,17 @@ async def summarize(
         resources = await file.read()
         resources = json.loads(resources)
     except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
     # Process file and summarize resources
     try:
         limit = 1 if limit <= 0 else limit
         if limit:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)[:limit]
+            resources_processed = process_resources(data=resources, remove_urls=remove_urls)[:limit]
         else:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)
+            resources_processed = process_resources(data=resources, remove_urls=remove_urls)
         resources_summarized = summarize_resources(resources_processed, stream)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during processing: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during processing: {str(e)}")
     # Save resources
     try:
         helpers.bulk(
