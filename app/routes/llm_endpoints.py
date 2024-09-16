@@ -20,7 +20,8 @@ async def answer_query(
     query: str, k: int = 5, params=None, stream: bool = False, text_boost: float = 0.25, embedding_boost: float = 4.0
 ):
     results = search_query(query, embedding_model, es_client, k=k,
-                           text_boost=text_boost, embedding_boost=embedding_boost)
+                           text_boost=text_boost, embedding_boost=embedding_boost,
+                           rerank_top_k=0)
     if not results:
         concatenated_content = "There is no context"
     else:

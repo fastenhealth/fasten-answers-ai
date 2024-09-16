@@ -1,19 +1,21 @@
 import time
+from typing import List
 
 from fastapi.responses import StreamingResponse
 
 from app.services.llama_client import llm_client
 from app.config.settings import logger
+from app.data_models.search_result import SearchResult
 
 
-def process_search_output(search_results):
+def process_search_output(search_results: List[SearchResult]):
     logger.info("Processing search results")
     processed_contents = []
     resources_id = []
 
     for result in search_results:
-        content = result["content"]
-        resource_id = result["metadata"]["resource_id"]
+        content = result.content
+        resource_id = result.metadata["resource_id"]
 
         processed_contents.append(content.replace("\\", ""))
         resources_id.append(resource_id)

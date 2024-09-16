@@ -22,6 +22,7 @@ async def evaluate_retrieval(file: UploadFile = File(...),
                              search_text_boost: float = Form(1),
                              search_embedding_boost: float = Form(1),
                              k: int = Form(5),
+                             rerank_top_k: int = Form(0),
                              urls_in_resources: bool = Form(None),
                              questions_with_ids_and_dates: str = Form(None),
                              chunk_size: int = Form(None),
@@ -60,6 +61,7 @@ async def evaluate_retrieval(file: UploadFile = File(...),
                 "search_text_boost": search_text_boost,
                 "search_embedding_boost": search_embedding_boost,
                 "k": k,
+                "rerank_top_k": rerank_top_k,
                 "urls_in_resources": urls_in_resources,
                 "questions_with_ids_and_dates": questions_with_ids_and_dates,
                 "chunk_size": chunk_size,
@@ -77,7 +79,8 @@ async def evaluate_retrieval(file: UploadFile = File(...),
             qa_references=qa_references,
             search_text_boost=search_text_boost,
             search_embedding_boost=search_embedding_boost,
-            k=k)
+            k=k,
+            rerank_top_k=rerank_top_k)
 
         # Upload metrics and close task
         if task:
