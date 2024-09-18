@@ -1,9 +1,12 @@
 import csv
+import json
+import pandas as pd
 import os
-from datetime import datetime
 
 from tqdm import tqdm
 
+from app.config.settings import logger
+from app.processor.files_processor import ensure_data_directory_exists, generate_output_filename
 from app.services.openai import OpenAIHandler
 
 
@@ -55,20 +58,6 @@ def calculate_costs(
     return total_cost_info
 
 
-def ensure_data_directory_exists():
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    data_dir = os.path.join(project_root, "data")
-
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir)
-    return data_dir
-
-
-def generate_output_filename(task: str):
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    return f"openai_responses_{task}_{timestamp}.csv"
-
-
 def process_prompts_and_save_responses(
     system_prompt: str,
     user_prompts: list[dict],
@@ -97,7 +86,7 @@ def process_prompts_and_save_responses(
     data_dir = ensure_data_directory_exists()
 
     # Output filename
-    output_file = os.path.join(data_dir, generate_output_filename(task=task))
+    output_file = os.path.join(data_dir, generate_output_filename(process="openai_responses", task=task))
 
     with open(output_file, newline="", mode="w") as file:
         writer = csv.DictWriter(file, fieldnames=["resource_id", "resource_type", "original_resource", "openai_summary"])
@@ -129,3 +118,32 @@ def process_prompts_and_save_responses(
             file.flush()
 
     return output_file
+
+
+def jsonl_dataset_to_dataframe(jsonl_file: str) -> pd.DataFrame:
+    """
+    Read evaluation dataset in JSONL format from Openai
+    """
+    openai_responses = []
+
+    for line in jsonl_file.splitlines():
+        openai_responses.append(json.loads(line))
+
+    results = []
+
+    for response in openai_responses:
+        resource_id = response["custom_id"]
+        content = response["response"]["body"]["choices"][0]["message"]["content"]
+
+        try:
+            questions_and_answers = json.loads(content)["questions_and_answers"][0]
+            question = questions_and_answers["question"]
+            reference_answer = questions_and_answers["answer"]
+        except json.JSONDecodeError as e:
+            logger.error(f"JSONDecodeError: Failed to parse content for resource ID {resource_id}. Error: {e}")
+            continue
+
+        result = {"resource_id_source": resource_id, "openai_query": question, "openai_answer": reference_answer}
+        results.append(result)
+
+    return pd.DataFrame(results)

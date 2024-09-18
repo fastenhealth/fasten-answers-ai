@@ -1,8 +1,9 @@
-import asyncio
-import aiohttp
 import requests
 import json
-from typing import List
+
+import asyncio
+import aiohttp
+import traceback
 
 from app.config.settings import settings, logger
 
@@ -30,15 +31,15 @@ class LlamaCppClient:
     def __init__(self):
         self.base_url = settings.model.llm_host
 
-    async def _call_model_parallel(self, url, payloads) -> List[dict]:
+    async def _call_model_parallel(self, url, payloads) -> list[dict]:
         """This function calls the model at url in parallel with multiple payloads"""
         async with aiohttp.ClientSession() as session:
 
-            async def fetch(url, data):
+            async def make_request(url, data):
                 async with session.post(url, json=data) as response:
                     return await response.json()
 
-            return await asyncio.gather(*[fetch(url, data) for data in payloads])
+            return await asyncio.gather(*[make_request(url, data) for data in payloads])
 
     def _build_payload(self, model_prompt, query, params, context=None):
         if context:
@@ -48,20 +49,13 @@ class LlamaCppClient:
 
         data = {"prompt": prompt, **params}
 
-        logger.info(f"Sending request to llama.cpp server with prompt: {prompt}")
-
         return data
 
-    def chat(self, query, stream, context=None, params=None, task="conversate") -> dict:
+    def chat(self, query, stream, model_prompt: str, context=None, params=None) -> dict:
         params = params or self.DEFAULT_PARAMS.copy()
         params["stream"] = stream
 
-        if task == "conversate":
-            data = self._build_payload(
-                model_prompt=settings.model.conversation_model_prompt, query=query, params=params, context=context
-            )
-        elif task == "summarize":
-            data = self._build_payload(model_prompt=settings.model.summaries_model_prompt, query=query, params=params)
+        data = self._build_payload(model_prompt=model_prompt, query=query, params=params, context=context)
 
         try:
             if params["stream"]:
@@ -72,19 +66,30 @@ class LlamaCppClient:
             logger.error(f"Request failed: {e}")
             raise
 
-    def chat_parallel(self, contexts, messages, params=None) -> List[dict]:
+    async def process_parallel(
+        self, contexts=None, messages=None, resource_batch=None, model_prompt=None, params=None
+    ) -> list[dict]:
+        url = f"{self.base_url}/completion"
         params = params or self.DEFAULT_PARAMS.copy()
 
         payloads = []
-        for context, message in zip(contexts, messages):
-            payloads.append(self._build_payload(context, message, params))
+
+        # Chat
+        if contexts and messages:
+            for context, message in zip(contexts, messages):
+                payloads.append(self._build_payload(context, message, params))
+
+        # Summarize
+        elif resource_batch and model_prompt:
+            for resource in resource_batch:
+                payloads.append(self._build_payload(model_prompt=model_prompt, query=resource["resource"], params=params))
 
         logger.info(f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
-        url = f"{self.base_url}/completion"
+
         try:
-            return asyncio.run(self._call_model_parallel(url, payloads))
+            return await self._call_model_parallel(url, payloads)
         except requests.RequestException as e:
-            logger.error(f"Parallel requests failed: {e}")
+            logger.error(f"Error processing batch: {str(e)}\n{traceback.format_exc()}")
             raise
 
     def _stream_response(self, data):

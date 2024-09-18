@@ -17,14 +17,15 @@ class ModelsSettings:
         # Embedding model
         self.embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
         # LLM host
-        self.llm_host = os.getenv("LLAMA_HOST", "http://localhost:8090")
+        self.llm_host = os.getenv("LLAMA_HOST", "http://localhost:9090")
         # Conversation prompts
-        self.conversation_model_prompt = self.load_prompt(
-            os.path.join(base_dir, "prompts/conversation_model_prompt_Phi-3.5-instruct.txt")
-        )
+        self.conversation_model_prompt = {
+            "llama3.1": self.load_prompt(os.path.join(base_dir, "prompts/conversation_model_prompt_llama3.1-instruct.txt")),
+            "Phi3.5-mini": self.load_prompt(os.path.join(base_dir, "prompts/conversation_model_prompt_Phi-3.5-instruct.txt")),
+        }
         # Summaries prompts
         self.summaries_model_prompt = self.load_prompt(
-            os.path.join(base_dir, "prompts/summaries_model_prompt_Phi-3.5-instruct.txt")
+            os.path.join(base_dir, "prompts/summaries_model_prompt_llama3.1-instruct.txt")
         )
         # Summaries openai system prompt
         self.summaries_openai_system_prompt = self.load_prompt(
