@@ -87,9 +87,8 @@ class CorrectnessEvaluator:
         """
         try:
             user_prompt = CORRECTNESS_USER_TMPL.format(
-                query=query_str,
-                reference_answer=reference_answer,
-                generated_answer=generated_answer)
+                query=query_str, reference_answer=reference_answer, generated_answer=generated_answer
+            )
 
             system_prompt = CORRECTNESS_SYS_TMPL
 
@@ -107,7 +106,11 @@ class CorrectnessEvaluator:
             score = json_answer["score"]
             reasoning = json_answer["reasoning"]
 
-            return {"score": score, "reasoning": reasoning, "passing": score >= self.threshold, }
+            return {
+                "score": score,
+                "reasoning": reasoning,
+                "passing": score >= self.threshold,
+            }
 
         except json.JSONDecodeError as e:
             logging.error(f"Failed to decode JSON response: {e}")
@@ -121,14 +124,15 @@ class CorrectnessEvaluator:
             logging.error(f"An error occurred: {e}")
             return {"score": None, "passing": None, "reasoning": "An unexpected error occurred"}
 
-    def run_batch_evaluation(self,
-                             df: pd.DataFrame,
-                             output_file: str,
-                             query_column: str,
-                             reference_answer_column: str,
-                             generated_answer_column: str,
-                             resource_id_column: str
-                             ):
+    def evaluate_dataset(
+        self,
+        df: pd.DataFrame,
+        output_file: str,
+        query_column: str,
+        reference_answer_column: str,
+        generated_answer_column: str,
+        resource_id_column: str,
+    ):
         """
         Runs correctness evaluation on a batch of queries, reference answers, and generated answers.
         Saves results incrementally to avoid data loss in case of failure.
@@ -144,9 +148,8 @@ class CorrectnessEvaluator:
 
         fieldnames = [resource_id_column, 'score', 'reasoning', 'passing']
 
-        with open(output_file, mode='w', newline='') as file:
-            writer = csv.DictWriter(
-                file, fieldnames=fieldnames)
+        with open(output_file, mode="w", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=fieldnames)
 
             # Write header
             writer.writeheader()
@@ -175,7 +178,6 @@ class CorrectnessEvaluator:
         # Load the results back into a DataFrame
         results_df = pd.read_csv(output_file)
 
-        correctnes_mean_score = round(results_df["score"].sum(
-        ) / (len(results_df) * 5), 2)
+        correctnes_mean_score = round(results_df["score"].sum() / (len(results_df) * 5), 2)
 
         return {"Correctness Mean Score": correctnes_mean_score}

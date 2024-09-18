@@ -41,11 +41,7 @@ class LlamaCppClient:
 
             return await asyncio.gather(*[make_request(url, data) for data in payloads])
 
-    def _build_payload(self,
-                       model_prompt,
-                       query,
-                       params,
-                       context=None):
+    def _build_payload(self, model_prompt, query, params, context=None):
         if context:
             prompt = model_prompt.format(context=context, query=query)
         else:
@@ -55,21 +51,11 @@ class LlamaCppClient:
 
         return data
 
-    def chat(self,
-             query,
-             stream,
-             model_prompt: str,
-             context=None,
-             params=None) -> dict:
+    def chat(self, query, stream, model_prompt: str, context=None, params=None) -> dict:
         params = params or self.DEFAULT_PARAMS.copy()
         params["stream"] = stream
 
-        data = self._build_payload(
-            model_prompt=model_prompt,
-            query=query,
-            params=params,
-            context=context
-        )
+        data = self._build_payload(model_prompt=model_prompt, query=query, params=params, context=context)
 
         try:
             if params["stream"]:
@@ -80,12 +66,9 @@ class LlamaCppClient:
             logger.error(f"Request failed: {e}")
             raise
 
-    async def process_parallel(self,
-                               contexts=None,
-                               messages=None,
-                               resource_batch=None,
-                               model_prompt=None,
-                               params=None) -> list[dict]:
+    async def process_parallel(
+        self, contexts=None, messages=None, resource_batch=None, model_prompt=None, params=None
+    ) -> list[dict]:
         url = f"{self.base_url}/completion"
         params = params or self.DEFAULT_PARAMS.copy()
 
@@ -99,22 +82,18 @@ class LlamaCppClient:
         # Summarize
         elif resource_batch and model_prompt:
             for resource in resource_batch:
-                payloads.append(self._build_payload(
-                    model_prompt=model_prompt, query=resource["resource"], params=params))
+                payloads.append(self._build_payload(model_prompt=model_prompt, query=resource["resource"], params=params))
 
-        logger.info(
-            f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
+        logger.info(f"Sending parallel requests to llama.cpp server with {len(payloads)} payloads")
 
         try:
             return await self._call_model_parallel(url, payloads)
         except requests.RequestException as e:
-            logger.error(
-                f"Error processing batch: {str(e)}\n{traceback.format_exc()}")
+            logger.error(f"Error processing batch: {str(e)}\n{traceback.format_exc()}")
             raise
 
     def _stream_response(self, data):
-        response = requests.post(
-            f"{self.base_url}/completion", json=data, stream=True)
+        response = requests.post(f"{self.base_url}/completion", json=data, stream=True)
         response.raise_for_status()
 
         for line in response.iter_lines():
