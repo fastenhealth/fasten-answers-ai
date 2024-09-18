@@ -62,3 +62,8 @@ It uses the following components:
     - **Elasticsearch**: Available at `http://localhost:9200`
     - **Llama**: Served by llama.cpp at `http://localhost:8080`
     - **FastAPI Application**: Available at `http://localhost:8000`
+
+## Running the evaluations
+
+* [Retrieval evaluation](./docs/evaluate_retrieval.md)
+* [Generation evaluation](./docs/evaluate_generation.md)

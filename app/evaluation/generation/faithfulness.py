@@ -97,7 +97,7 @@ class FaithfulnessEvaluator:
                 user_prompt=user_prompt,
                 system_prompt=system_prompt,
                 answer_json_schema=ANSWER_JSON_SCHEMA,
-                max_tokens=self.max_tokens
+                max_tokens=self.max_tokens,
             )
 
             json_answer = json.loads(open_ai_response.get("choices")[0].get("message").get("content"))
@@ -152,8 +152,7 @@ class FaithfulnessEvaluator:
         """
         openai_handler = OpenAIHandler(model=self.model)
 
-        fieldnames = [resource_id_column, 'relevancy',
-                      'accuracy', 'conciseness_and_pertinence', 'reasoning']
+        fieldnames = [resource_id_column, "relevancy", "accuracy", "conciseness_and_pertinence", "reasoning"]
 
         with open(output_file, mode="w", newline="") as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -163,9 +162,7 @@ class FaithfulnessEvaluator:
             try:
                 for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing faithfulness"):
                     result = self.run_faithfulness_eval(
-                        row[generated_answer_column],
-                        row[contexts_column],
-                        openai_handler=openai_handler
+                        row[generated_answer_column], row[contexts_column], openai_handler=openai_handler
                     )
 
                     result[resource_id_column] = row[resource_id_column]
@@ -188,5 +185,8 @@ class FaithfulnessEvaluator:
         faithfulness_accuracy = round(results_df["accuracy"].sum() / total_questions, 2)
         faithfulness_conciseness_and_pertinence = round(results_df["conciseness_and_pertinence"].sum() / total_questions, 2)
 
-        return {"faithfulness_relevancy": faithfulness_relevancy, "faithfulness_accuracy": faithfulness_accuracy,
-                "faithfulness_conciseness_and_pertinence": faithfulness_conciseness_and_pertinence}
+        return {
+            "faithfulness_relevancy": faithfulness_relevancy,
+            "faithfulness_accuracy": faithfulness_accuracy,
+            "faithfulness_conciseness_and_pertinence": faithfulness_conciseness_and_pertinence,
+        }

@@ -168,7 +168,7 @@ async def evaluate_generation(
             task.connect(params)
 
         evaluator = CorrectnessEvaluator(openai_api_key, openai_model, threshold=correctness_threshold, max_tokens=max_tokens)
-        evaluation_metrics = evaluator.evaluate_dataset(
+        evaluation_metrics_correctness = evaluator.evaluate_dataset(
             df=df,
             output_file=output_file_correctness,
             query_column=query_column,
@@ -178,7 +178,7 @@ async def evaluate_generation(
         )
 
         evaluator = FaithfulnessEvaluator(openai_api_key, openai_model, max_tokens=max_tokens)
-        evaluation_metrics = evaluator.evaluate_dataset(
+        evaluation_metrics_faithfulness = evaluator.evaluate_dataset(
             df=df,
             output_file=output_file_faithfulness,
             generated_answer_column=generated_answer_column,
@@ -186,13 +186,15 @@ async def evaluate_generation(
             resource_id_column=resource_id_column,
         )
 
+        combined_metrics = {**evaluation_metrics_correctness, **evaluation_metrics_faithfulness}
+
         # Upload metrics to clearml
         if clearml_track_experiment and task:
-            for series_name, value in evaluation_metrics.items():
+            for series_name, value in combined_metrics.items():
                 task.get_logger().report_single_value(name=series_name, value=value)
             task.close()
 
-        return evaluation_metrics
+        return combined_metrics
 
     except Exception as e:
         raise HTTPException(
@@ -200,13 +202,12 @@ async def evaluate_generation(
         )
 
 
-@router.post("/batch_generation")
-async def batch_generation(
+@router.post("/dataset_generation")
+async def dataset_generation(
     file: UploadFile = File(...),
     limit: int = File(None),
     question_column: str = File("openai_query"),
     model_prompt: str = Form("llama3.1"),
-    llm_model: str = Form("llama3.1"),
     search_text_boost: float = Form(1),
     search_embedding_boost: float = Form(1),
     k: int = Form(5),
@@ -241,7 +242,7 @@ async def batch_generation(
             k=k,
             text_boost=search_text_boost,
             embedding_boost=search_embedding_boost,
-            llm_model=llm_model,
+            llm_model=model_prompt,
             process=process,
             job=job,
         )

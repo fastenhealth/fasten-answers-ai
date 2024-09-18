@@ -1,256 +1,118 @@
-Para hacer la evaluación del retrieval se deben seguir los siguientes pasos
 
-Se debe en primer lugar hacer la carga a la base de datos de elastic search usando el endpoint /database/bulkload
+# Retrieval Evaluation for fasten-answers-ai
 
-Este endpoint acepta un file y un text key.
+This document provides step-by-step instructions on how to evaluate the retrieval component of the system. Follow the instructions below carefully to ensure correct execution and evaluation.
 
-Este es el endpoint:
+## Metrics evaluated
 
-@router.post("/bulk_load")
-async def bulk_load(file: UploadFile = File(...), text_key: str = Form(...)):
-    data = await file.read()
+Here are brief explanations of the metrics we’ve used:
 
-    if file.filename.endswith(".json"):
-        json_data = json.loads(data)["entry"]
-    elif file.filename.endswith(".csv"):
-        json_data = csv_to_dict(data)
+* **Retrieval Accuracy:** The percentage of questions for which the system successfully retrieved at least one relevant chunk.
+* **Average Position:** Average position of the relevant chunks retrieved.
+* **MRR (Mean Reciprocal Rank):** For each query, the rank of the first relevant document is noted, and the reciprocal of this rank (1/rank) is calculated. The average of these reciprocal ranks across all queries gives the MRR score.
+* **Average Precision:** Average of the relevant chunks retrieved over the total chunks retrieved.
+* **Average Recall:** Average of the relevant chunks retrieved over the total relevant chunks
 
-    else:
-        raise HTTPException(status_code=400, detail="Unsupported file format. Only JSON and CSV are supported.")
+## Retrieval evaluation summary
 
-    try:
-        helpers.bulk(
-            es_client,
-            bulk_load_fhir_data(
-                json_data, text_key, embedding_model=embedding_model, index_name=settings.elasticsearch.index_name
-            ),
-        )
-        logger.info(f"Bulk load completed for file: {file.filename}")
-        return {"status": "success", "filename": file.filename}
-    except Exception as e:
-        logger.error(f"Bulk load failed: {str(e)}")
-        return {"status": "error", "message": str(e)}
+These are the necessary steps for successfully running the retrieval evaluation:
 
+1. **Evaluation dataset:** A dataset containing the questions and answers for each resource or for the chunks of each resource, to be used for the evaluation.
+2. **Populate database:** The Elasticsearch database must be populated using one of the strategies mentioned in the [indexing strategies documentation](./docs/indexing_strategies.md).
+3. **Evaluate retrieval**: the retrieval evaluation by using the [/evaluation/evaluate_retrieval](../app/routes/evaluation_endpoints.py) endpoint, providing the evaluation dataset and adjusting parameters such as `search_text_boost`, `search_embedding_boost`, and `k` to fine-tune the results."
 
-Si el inputfile en un json FHIR file, el endpoint cargará cada resource por separado como un chunk completo a la base de datos. Si es un csv y se especifica la columna de texto que se quiere vectorizar con el text_key, entonces se hará el embedding de la columna texto usando sentence transformers con el modelo de all-MiniLM-L6-v2.
+## 1. Evaluation dataset
 
-El archivo debe contener los campos de resource_id y resource_type. Son opcionales los campos de tokens_evaluated,
-tokens_predicted, prompt_ms, y predicted_ms. TOdos estos desde resource id hasta predicted_ms se guardarán en el campo de metadata de cada documento en elasticsearch
+In this case, we will use the "questions and answers per complete resource" strategy as an example. This strategy is preferred for evaluation because it allows for more comprehensive and robust questions and answers by using the entire resource context, unlike other strategies used by RAG evaluation frameworks such as LlamaIndex or RAGAS, which create datasets per chunk, resulting in repetitive and less valuable questions. Given the nature of the problem and the structure of FHIR data, we decided that generating questions per resource provides a fuller context.
 
-Para generar un archivo que se pueda subir a la base de datos, se puede usar el endpoint de generation/summarize_and_load_parallel, el cual ejecutará de forma paralela llama.cpp para generar resúmenes de cada resource usando el prompt que se especifica en en self.summaries_model_prompt en ModelsSettings, en el archivo config/settings. Se puede seleccionar entre el prompt de llama3 y el de phi3.5 mini. En una siguiente versión se colocará este parámetro como parámetro de entrada del endpoint para mayor facilidad.
+Currently, the Q&A file can be generated using the file created by the [main.py script](../evaluation/evaluation_dataset/full_json_dumps_strategy/main.py), which produces a JSONL file that is compatible with the OpenAI batch API
 
-Como otros parámetros de entrada, este endpoint acepta remover urls o no dentro del archivo fhir original, un batch_size que permite especificar cuantos resource resumir en paralelo. Por el momento se recomienda ejecutar un batch size de 1, ya que se nota un comportamiento extraño en la generación usando batch superiores a 1. Finalmente, limit se encarga de limitar la cantidad de resúmenes a generar, en caso de que se quiera hacer una prueba previa.
+This script will soon be migrated into an endpoint in [openai_endpoints.py](../app/routes/openai_endpoints.py)
 
-Este es el endpoint de summarize_and_load_parallel:
+At present, there are two JSONL files available for evaluation, both generated using the OpenAI API in batch mode. One includes questions with resource IDs and dates (if available), while the other does not. Both files were generated after removing URLs from the original resources.
 
+* [File with IDs and dates](../evaluation/data/openai_outputs/batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.jsonl)
+* [File without IDs and dates](../evaluation/data/openai_outputs/batch_O9aiHyHpLDHCaaxZzcw1dqDS_output_no_ids_dates_no_urls.jsonl)
+
+## 2. Populate database
+
+There are different strategies we have used to store data in Elasticsearch and improve retrieval metrics. In this case, we will use the strategy of generating a summary for each resource. This resource summary will be saved in the database. The fields `resource_id`, `resource_type`, `tokens_evaluated`, `tokens_predicted`, `prompt_ms`, and `predicted_ms` will be stored as metadata for each document. Since we are using LLaMA.cpp, the last three fields are available because they are returned in the response from LLaMA.cpp along with the requested summary.
+
+To generate summaries for each resource and load them into the database, use the [`/generation/summarize_and_load_parallel`](../app/routes/llm_endpoints.py) endpoint. This method runs summaries in parallel using the LLaMA 3.1 or Phi-3.5 mini models.
+
+### Summarize and load in parallel endpoint
+```python
 @router.post("/summarize_and_load_parallel")
-async def summarize_and_load(
-    file: UploadFile = File(...),
-    remove_urls: bool = Form(True),
-    batch_size: int = Form(4),
-    limit: int = Form(None),
-):
-    # Read file
-    try:
-        resources = await file.read()
-        resources = json.loads(resources)
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
-    # Process file and summarize resources
-    try:
-        limit = 1 if limit <= 0 else limit
-        if limit:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)[:limit]
-        else:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during processing: {str(e)}")
-    # Generate summaries and save
-    try:
-        output_file = await summarize_resources_parallel(model_prompt=settings.model.summaries_model_prompt,
-                                                         es_client=es_client,
-                                                         embedding_model=embedding_model,
-                                                         resources=resources_processed,
-                                                         batch_size=batch_size)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during summaries generation: {str(e)}")
+async def summarize_and_load(file: UploadFile,
+                             remove_urls: bool,
+                             batch_size: int,
+                             limit: int):
+```
 
-    return {"detail": "Data summarized and loaded successfully.", "Output file": output_file}
+#### Parameters:
+- **file**: FHIR data in JSON format.
+- **remove_urls**: Option to remove URLs from the original FHIR file before creating the summaries.
+- **batch_size**: Number of resources to summarize in parallel (it is recommended to use 1 due to unexpected behavior in the answers with higher values until the issue is fixed).
+- **limit**: Limit the number of summaries to generate (useful for testing).
 
+After generating the summaries, the resulting file can be reviewed in the path [`./data/`](../app/data/), and you can also verify that they have been successfully loaded into the database using the endpoint [`database/get_all_documents`](../app/routes/database_endpoints.py).
 
-Los archivos que se generen usando este endpoint se almacenarán en el volumen ./data/ en la raiz del repositorio.
+### Get all documents endpoint
 
-Una vez se tenga el archivo generado, se puede usar el endpoint de bulk load para guardar el archivo en la base de elastic.
+```python
+@router.get("/get_all_documents")
+async def get_all_documents(index_name: str = settings.elasticsearch.index_name, size: int = 2000)
+```
 
-Otra forma de generar un archivo con resúmenes, es usando la la API de Openai y el endpoint de openai/execute_batch_chat_requests. 
+Finally, if you want to use an existing file to load data directly into the database without generating the summaries, you can use the file [resources_summarized.csv](../app/data/resources_summarized.csv) through the endpoint [/database/bulkload](../app/routes/database_endpoints.py).
 
-Este es el endpoint:
+### Bulk load data endpoint
 
-@router.post("/execute_batch_chat_requests")
-async def execute_batch_chat_requests(
-    openai_api_key: str = Form(...),
-    task: str = Form("summarize"),
-    remove_urls: bool = Form(True),
-    get_costs: bool = Form(True),
-    cost_per_million_input_tokens: float = Form(0.150),
-    cost_per_million_output_tokens: float = Form(0.600),
-    max_tokens_per_response: int = Form(300),
-    openai_model: str = Form("gpt-4o-mini-2024-07-18"),
-    file: UploadFile = File(...),
-):
-    # Read file
-    try:
-        resources = await file.read()
-        resources = json.loads(resources)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
+```python
+@router.post("/bulk_load")
+async def bulk_load(file: UploadFile = File(...),
+                    text_key: str = Form(...)):
+```
+#### Parameters:
+- **file**: JSON or CSV containing the data.
+- **text_key**: Specifies the text field to create the embeddings using sentence transformers with `all-MiniLM-L6-v2`.
 
-    # Process resources
-    try:
-        resources_processed = process_resources(data=resources, remove_urls=remove_urls)
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during processing: {str(e)}")
+#### Supported Formats:
+- **JSON**: Uploads each FHIR resource as individual document into the database.
+- **CSV**: Each row is uploaded as a document. The specified text_key column will contain the text that is converted into an embedding.
 
-    # Get model prompt for the task
-    if task == "summarize":
-        system_prompt = settings.model.summaries_openai_system_prompt
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unsupported task.")
+Metadata such as `resource_id` and `resource_type` are saved into Elasticsearch under each document's metadata. If available, the values for `tokens_evaluated`, `tokens_predicted`, `prompt_ms`, and `predicted_ms` will also be saved under each document's metadata.
 
-    # Calculate costs
-    if get_costs:
-        try:
-            costs = calculate_costs(
-                system_prompt=system_prompt,
-                user_prompts=resources_processed,
-                cost_per_million_input_tokens=cost_per_million_input_tokens,
-                cost_per_million_output_tokens=cost_per_million_output_tokens,
-                tokens_per_response=max_tokens_per_response,
-                model=openai_model,
-            )
-            return costs
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error calculating costs: {str(e)}")
-    # Get answers from resources
-    else:
-        try:
-            output_file = process_prompts_and_save_responses(
-                task=task,
-                system_prompt=system_prompt,
-                user_prompts=resources_processed,
-                openai_api_key=openai_api_key,
-                model=openai_model,
-                max_tokens=max_tokens_per_response,
-            )
-            return {"message": f"Responses saved to {output_file}"}
-        except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error generating responses: {str(e)}")
+Now, with the database populated and the evaluation dataset ready, you can proceed to the evaluation.
 
-Este endpoint recive el api key de open ai, la tarea (en este momento solo soporta la task de summarize), si se remueven urls o no al procesar los datos de fhir, el file de FHIR en formato json. Si get_costs es true, solo retorna los costos totales de  input y output tokens para la tarea que se ejecutará. Finalmente también incluye los cost_per_million_input_tokens y cost_per_million_output_tokens para que se incluyan los costos actuales al momento de ejecutar el código, y también la cantidad máxima de tokens que se pueden generar en su api y el modelo a usar. Este archivo generado también se almacena en el volumen de data en la raiz del proyecto.
+## 3. Evaluate retrieval
 
+Once the data is loaded into Elasticsearch, and the Q&A file is ready, use the [`/evaluation/evaluate_retrieval`](../app/routes/evaluation_endpoints.py) endpoint to evaluate the retrieval performance. Make sure to tune the `search_text_boost` and `search_embedding_boost` parameters. In our tests, we achieved optimal results with values of `0.25` and `4.0`, respectively.
 
-Con estos dos endpoints se pueden generar la data para usar los archivos que se desean cargar con el endpoint de bulk load y emepzar a evaluar el retrieval.
-
-
-Antes de proceder con el evaluation retrieval, se debe contar con el archivo que tiene las preguntas y respuestas o queries y answers para cada resource dentro del archivo FHIR para hacer la evaluación del retrieval y del generation. Decidimos hacer una pregunta y respuesta por recurso, teniendo en cuenta que usando el resource completo, podemos generar preguntas y respuestas de mayor valor. A diferencia de los frameworks de evaluación de rags como llamaindex o ragas, decidimos tomar este approach, ya que si se divide cada resource en chunks y luego se saca una pregunta y respuesta por chunk, las preguntas y respuestas generadas no son de mucho valor y terminan siendo muy similares a las de otros resources.
-
-Actualmente el archivo con las preguntas y respuestas generadas por openai se pueden generar a partir del archivo [main.py](../evaluation/evaluation_dataset/full_json_dumps_strategy/main.py), el cual posteriormente será migrado como endpoint al archivo [openai_endpoints.py](../app/routes/openai_endpoints.py).
-
-
-Una vex los datos estń cargados y se tengan las preguntas y respuestas para evaluar el retrieval, se puede usar el endpoint de evaluation/evaluate_retrieval.
-
-
-Este es el endpoint de evaluate retrieval:
-
+### Evaluate retrieval endpoint:
+```python
 @router.post("/evaluate_retrieval")
-async def evaluate_retrieval(
-    file: UploadFile = File(...),
-    index_name: str = Form(settings.elasticsearch.index_name),
-    size: int = Form(2000),
-    search_text_boost: float = Form(1),
-    search_embedding_boost: float = Form(1),
-    k: int = Form(5),
-    rerank_top_k: int = Form(0),
-    urls_in_resources: bool = Form(None),
-    questions_with_ids_and_dates: str = Form(None),
-    chunk_size: int = Form(None),
-    chunk_overlap: int = Form(None),
-    clearml_track_experiment: bool = Form(False),
-    clearml_experiment_name: str = Form("Retrieval evaluation"),
-    clearml_project_name: str = Form("Fasten"),
-):
-    # Read and process reference questions and answers in JSONL
-    try:
-        qa_references = []
+async def evaluate_retrieval(file: UploadFile,
+                             index_name: str,
+                             size: int,
+                             search_text_boost: float, ...):
+```
 
-        file_data = await file.read()
-
-        for line in file_data.decode("utf-8").splitlines():
-            qa_references.append(json.loads(line))
-    except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
-    # Count total chunks by resource in database
-    try:
-        documents = fetch_all_documents(
-            index_name=index_name, es_client=es_client, size=size)
-        id, counts = np.unique([resource["metadata"]["resource_id"]
-                               for resource in documents], return_counts=True)
-        resources_counts = dict(zip(id, counts))
-    except Exception as e:
-        logger.error(f"Error retrieving documents: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error retrieving documents: {str(e)}")
-    # Evaluate retrieval
-    try:
-        if clearml_track_experiment:
-            params = {
-                "search_text_boost": search_text_boost,
-                "search_embedding_boost": search_embedding_boost,
-                "k": k,
-                "rerank_top_k": rerank_top_k,
-                "urls_in_resources": urls_in_resources,
-                "questions_with_ids_and_dates": questions_with_ids_and_dates,
-                "chunk_size": chunk_size,
-                "chunk_overlap": chunk_overlap,
-            }
-            unique_task_name = f"{clearml_experiment_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-            task = Task.init(project_name=clearml_project_name,
-                             task_name=unique_task_name)
-            task.connect(params)
-
-        retrieval_metrics = evaluate_resources_summaries_retrieval(
-            es_client=es_client,
-            embedding_model=embedding_model,
-            resource_chunk_counts=resources_counts,
-            qa_references=qa_references,
-            search_text_boost=search_text_boost,
-            search_embedding_boost=search_embedding_boost,
-            k=k,
-            rerank_top_k=rerank_top_k,
-        )
-
-        # Upload metrics and close task
-        if task:
-            for series_name, value in retrieval_metrics.items():
-                task.get_logger().report_single_value(name=series_name, value=value)
-
-            task.close()
-
-        return retrieval_metrics
-
-    except Exception as e:
-        logger.error(f"Error during retrieval evaluation: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during retrieval evaluation: {str(e)}")
-
-Ese endpoint tiene en cuenta que la base de datos está populada, por lo que antes de ejecutarlo, se puede probar el endpoint de database/get_all_documents para validar que todo esté cargado.
+#### Parameters:
+- **file**: JSONL file containing the reference questions and answers.
+- **index_name**: The Elasticsearch index to search.
+- **size**: The total number of documents returned by the database. In this case, we want to return all documents for evaluation and count how many chunks there are per resource. Therefore, this value is set to a large number or can be adjusted to match the total number of documents stored in the database.
+- **search_text_boost**: Text field boost for search. 0.25 has been the best in our experiments.
+- **search_embedding_boost**: Embedding field boost for search. 4.0 has been the best in our experiments.
+- **k**: Number of top documents to retrieve
+- **urls_in_resources**: Indicates whether the resources in the database or the summaries were created with or without URLs in the FHIR data.
+- **questions_with_ids_and_dates**: Indicates whether the questions and answers used for the retrieval evaluation include dates and IDs or not.
+- **rerank_top_k**: Rerank the top-k retrieved documents.
+- **chunk_size**: Specify the chunk size if the documents were divided into chunks. This value is used for the experiment tracker.
+- **chunk_overlap**: Specify the chunk overlap if documents were divided into chunks.
+- **clearml_track_experiment**: Whether to track the experiment in ClearML.
+- **clearml_experiment_name**: Clearml experiment name (Retrieval evaluation recommended).
+- **clearml_project_name**: Clearml project name.
 
 
-Ya teniendo estas dos cosas, el archivo y la base de datos, hay que especificar el search_text_boost
-search_embedding_boost, los cuales son valores que elastic search permiten configurar para obtener mejores resultados al hacer una búsqueda. En nuestras pruebas, la combinación correcta nos dio que se alcanzaban mejores métricas para 0.25 y 4.0 respectivamente. k es la cantdad de documentos retornados por elastic. Rerank top ejecuta un reranker de los resultados obtenidos. urls_in_resources permite saber si dentro de los resourses en la base de datos se incluyeron o eliminaron las urls. questions_with_ids_and_dates permite saber si las preguntas generadas por openai tiene o no ids y fechas. Finalmente chunk_size y chunk_overlap permiten saber si se hizo alguna división de chunks al momento de guardar los docuemntos en elastic. Como en este momento el endpoint de bulk load no hace chunking, entonces se puede dejar vacío. Estos campos son más que todo para almacenar en clearml la configuración del experimento para posteriores análisis y comparaciones. Una vez se ejecute este endpoint, se tendrán los resultados las metricas del retrieval cargadas a clearml y como respuesta del endpoint.
+By following these steps, you will be able to successfully evaluate the retrieval system and track the performance using ClearML.

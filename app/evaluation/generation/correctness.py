@@ -97,11 +97,10 @@ class CorrectnessEvaluator:
                 user_prompt=user_prompt,
                 system_prompt=system_prompt,
                 answer_json_schema=ANSWER_JSON_SCHEMA,
-                max_tokens=self.max_tokens
+                max_tokens=self.max_tokens,
             )
 
-            json_answer = json.loads(open_ai_response.get("choices")[
-                                     0].get("message").get("content"))
+            json_answer = json.loads(open_ai_response.get("choices")[0].get("message").get("content"))
 
             score = json_answer["score"]
             reasoning = json_answer["reasoning"]
@@ -146,7 +145,7 @@ class CorrectnessEvaluator:
         """
         openai_handler = OpenAIHandler(model=self.model)
 
-        fieldnames = [resource_id_column, 'score', 'reasoning', 'passing']
+        fieldnames = [resource_id_column, "score", "reasoning", "passing"]
 
         with open(output_file, mode="w", newline="") as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -160,7 +159,7 @@ class CorrectnessEvaluator:
                         row[query_column],
                         row[reference_answer_column],
                         row[generated_answer_column],
-                        openai_handler=openai_handler
+                        openai_handler=openai_handler,
                     )
 
                     result[resource_id_column] = row[resource_id_column]
