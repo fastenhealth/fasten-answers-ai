@@ -19,6 +19,4 @@ def bulk_load_fhir_data(data: list[dict], text_key: str, embedding_model, index_
         if "predicted_ms" in value:
             metadata["predicted_ms"] = value["predicted_ms"]
 
-        yield {"_index": index_name, "_source": {"content": resource,
-                                                 "embedding": embedding,
-                                                 "metadata": metadata}}
+        yield {"_index": index_name, "_source": {"content": resource, "embedding": embedding, "metadata": metadata}}

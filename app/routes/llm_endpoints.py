@@ -1,7 +1,6 @@
 import json
 
-from fastapi import APIRouter, HTTPException, UploadFile, \
-    File, Form, status
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form, status
 
 from app import es_client, embedding_model
 from app.config.settings import settings
@@ -41,29 +40,28 @@ async def summarize_and_load(
         resources = await file.read()
         resources = json.loads(resources)
     except json.JSONDecodeError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON format.")
     # Process file and summarize resources
     try:
         limit = 1 if limit <= 0 else limit
         if limit:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)[:limit]
+            resources_processed = process_resources(data=resources, remove_urls=remove_urls)[:limit]
         else:
-            resources_processed = process_resources(
-                data=resources, remove_urls=remove_urls)
+            resources_processed = process_resources(data=resources, remove_urls=remove_urls)
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during processing: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during processing: {str(e)}")
     # Generate summaries and save
     try:
-        output_file = await summarize_resources_parallel(model_prompt=settings.model.summaries_model_prompt,
-                                                         es_client=es_client,
-                                                         embedding_model=embedding_model,
-                                                         resources=resources_processed,
-                                                         batch_size=batch_size)
+        output_file = await summarize_resources_parallel(
+            model_prompt=settings.model.summaries_model_prompt,
+            es_client=es_client,
+            embedding_model=embedding_model,
+            resources=resources_processed,
+            batch_size=batch_size,
+        )
     except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail=f"Error during summaries generation: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error during summaries generation: {str(e)}"
+        )
 
     return {"detail": "Data summarized and loaded successfully.", "Output file": output_file}

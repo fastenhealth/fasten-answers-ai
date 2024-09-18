@@ -6,8 +6,7 @@ import os
 from tqdm import tqdm
 
 from app.config.settings import logger
-from app.processor.files_processor import ensure_data_directory_exists, \
-    generate_output_filename
+from app.processor.files_processor import ensure_data_directory_exists, generate_output_filename
 from app.services.openai import OpenAIHandler
 
 
@@ -39,13 +38,11 @@ def calculate_costs(
     total_openai_requests = len(user_prompts)
 
     for user_prompt in user_prompts:
-        tokens_for_this_prompt = openai_handler.get_total_tokens_from_prompt(
-            user_prompt["resource"])
+        tokens_for_this_prompt = openai_handler.get_total_tokens_from_prompt(user_prompt["resource"])
 
         total_input_tokens += tokens_for_this_prompt
 
-    total_system_tokens = openai_handler.get_total_tokens_from_prompt(
-        system_prompt) * total_openai_requests
+    total_system_tokens = openai_handler.get_total_tokens_from_prompt(system_prompt) * total_openai_requests
 
     total_input_tokens += total_system_tokens
 
@@ -89,12 +86,10 @@ def process_prompts_and_save_responses(
     data_dir = ensure_data_directory_exists()
 
     # Output filename
-    output_file = os.path.join(data_dir, generate_output_filename(process="openai_responses",
-                                                                  task=task))
+    output_file = os.path.join(data_dir, generate_output_filename(process="openai_responses", task=task))
 
     with open(output_file, newline="", mode="w") as file:
-        writer = csv.DictWriter(file, fieldnames=[
-                                "resource_id", "resource_type", "original_resource", "openai_summary"])
+        writer = csv.DictWriter(file, fieldnames=["resource_id", "resource_type", "original_resource", "openai_summary"])
         writer.writeheader()
 
         for user_prompt in tqdm(user_prompts, total=len(user_prompts), desc="Generating completions"):
@@ -141,18 +136,14 @@ def jsonl_dataset_to_dataframe(jsonl_file: str) -> pd.DataFrame:
         content = response["response"]["body"]["choices"][0]["message"]["content"]
 
         try:
-            questions_and_answers = json.loads(
-                content)["questions_and_answers"][0]
+            questions_and_answers = json.loads(content)["questions_and_answers"][0]
             question = questions_and_answers["question"]
             reference_answer = questions_and_answers["answer"]
         except json.JSONDecodeError as e:
-            logger.error(
-                f"JSONDecodeError: Failed to parse content for resource ID {resource_id}. Error: {e}")
+            logger.error(f"JSONDecodeError: Failed to parse content for resource ID {resource_id}. Error: {e}")
             continue
 
-        result = {"resource_id_source": resource_id,
-                  "openai_query": question,
-                  "openai_answer": reference_answer}
+        result = {"resource_id_source": resource_id, "openai_query": question, "openai_answer": reference_answer}
         results.append(result)
 
     return pd.DataFrame(results)
