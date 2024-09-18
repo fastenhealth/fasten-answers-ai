@@ -11,7 +11,7 @@ import pandas as pd
 
 from tqdm import tqdm
 
-from evaluation.core.openai.openai import get_chat_completion
+from app.services.openai import OpenAIHandler
 
 
 FAITHFULLNESS_SYS_TMPL = """
@@ -77,7 +77,7 @@ class FaithfulnessEvaluator:
         self.model = model
         self.max_tokens = max_tokens
 
-    def run_faithfulness_eval(self, generated_answer: str, contexts: str):
+    def run_faithfulness_eval(self, generated_answer: str, contexts: str, openai_handler: OpenAIHandler):
         """
         Evaluates the faithfulness of a generated answer against provided contexts based on three aspects.
 
@@ -93,12 +93,13 @@ class FaithfulnessEvaluator:
                                                          contexts=contexts)
             system_prompt = FAITHFULLNESS_SYS_TMPL
 
-            open_ai_response = get_chat_completion(self.openai_api_key,
-                                                   user_prompt,
-                                                   system_prompt,
-                                                   ANSWER_JSON_SCHEMA,
-                                                   model=self.model,
-                                                   max_tokens=self.max_tokens)
+            open_ai_response = openai_handler.get_chat_completion(
+                openai_api_key=self.openai_api_key,
+                user_prompt=user_prompt,
+                system_prompt=system_prompt,
+                answer_json_schema=ANSWER_JSON_SCHEMA,
+                max_tokens=self.max_tokens
+            )
 
             json_answer = json.loads(open_ai_response.get("choices")[
                                      0].get("message").get("content"))
@@ -145,7 +146,10 @@ class FaithfulnessEvaluator:
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for relevancy, accuracy, conciseness and pertinence, and reasoning.
         """
-        fieldnames = [resource_id_column, 'relevancy', 'accuracy', 'conciseness_and_pertinence', 'reasoning']
+        openai_handler = OpenAIHandler(model=self.model)
+
+        fieldnames = [resource_id_column, 'relevancy',
+                      'accuracy', 'conciseness_and_pertinence', 'reasoning']
 
         with open(output_file, mode='w', newline='') as file:
             writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -156,8 +160,12 @@ class FaithfulnessEvaluator:
                 for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing faithfulness"):
                     result = self.run_faithfulness_eval(
                         row[generated_answer_column],
-                        row[contexts_column])
+                        row[contexts_column],
+                        openai_handler=openai_handler
+                    )
+
                     result[resource_id_column] = row[resource_id_column]
+
                     # Write the result to the CSV file
                     writer.writerow(result)
 
@@ -179,5 +187,5 @@ class FaithfulnessEvaluator:
         faithfulness_conciseness_and_pertinence = round(results_df["conciseness_and_pertinence"].sum(
         ) / total_questions, 2)
 
-        return {"faithfulness_relevancy": faithfulness_relevancy, "faithfulness_accuracy": faithfulness_accuracy, 
+        return {"faithfulness_relevancy": faithfulness_relevancy, "faithfulness_accuracy": faithfulness_accuracy,
                 "faithfulness_conciseness_and_pertinence": faithfulness_conciseness_and_pertinence}
