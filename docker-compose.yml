@@ -1,5 +1,6 @@
 services:
   app:
+    container_name: fasten-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -7,11 +8,10 @@ services:
       ES_HOST: http://elasticsearch:9200
       ES_USER: elastic
       ES_PASSWORD: changeme
+      ES_INDEX_NAME: fasten-index
       EMBEDDING_MODEL_NAME: all-MiniLM-L6-v2
-      LLAMA_HOST: http://llama:8080
-      LLAMA_PROMPT: "A chat between a curious user and an intelligent, polite medical assistant. The assistant provides detailed, helpful answers to the user's medical questions, including accurate references where applicable."
-      INDEX_NAME: fasten-index
-      UPLOAD_DIR: /app/data/
+      LLM_HOST: http://llama:9090
+
     ports:
       - "8000:8000"
     volumes:
@@ -19,9 +19,12 @@ services:
     depends_on:
       elasticsearch:
         condition: service_healthy
-
+    restart: always
+    command: >
+      uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   elasticsearch:
+    container_name: fasten-elasticsearch
     image: docker.elastic.co/elasticsearch/elasticsearch:8.12.1
     environment:
       discovery.type: single-node
@@ -33,24 +36,20 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cat/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsSL http://localhost:9200/_cat/health || exit 1" ]
       interval: 30s
       timeout: 10s
       retries: 3
 
   llama:
+    container_name: fasten-llama
     image: ghcr.io/ggerganov/llama.cpp:server
     volumes:
-      - ./model:/models
+      - ./models:/models
     command: >
-      -m models/Meta-Llama-3-8B-Instruct.Q5_K_M.gguf
-      -n -1
-      -c 512
-      -t 10
-      --host 0.0.0.0
-      --port 8080
+      -m models/Meta-Llama-3.1-8B-Instruct-F16-Q5_K_M.gguf -n 450 -c 2048 -t 10 --host 0.0.0.0 --port 8080
     ports:
-      - "8080:8080"
+      - "8090:8090"
 
 volumes:
   esdata:

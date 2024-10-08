@@ -7,7 +7,7 @@ class ElasticsearchSettings:
         self.host = os.getenv("ES_HOST", "http://localhost:9200")
         self.user = os.getenv("ES_USER", "elastic")
         self.password = os.getenv("ES_PASSWORD", "changeme")
-        self.index_name = os.getenv("INDEX_NAME", "fasten-index")
+        self.index_name = os.getenv("ES_INDEX_NAME", "fasten-index")
 
 
 class ModelsSettings:
@@ -17,7 +17,7 @@ class ModelsSettings:
         # Embedding model
         self.embedding_model_name = os.getenv("EMBEDDING_MODEL_NAME", "all-MiniLM-L6-v2")
         # LLM host
-        self.llm_host = os.getenv("LLAMA_HOST", "http://localhost:9090")
+        self.llm_host = os.getenv("LLM_HOST", "http://localhost:9090")
         # Conversation prompts
         self.conversation_model_prompt = {
             "llama3.1": self.load_prompt(os.path.join(base_dir, "prompts/conversation_model_prompt_llama3.1-instruct.txt")),

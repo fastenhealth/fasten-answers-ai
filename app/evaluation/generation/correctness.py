@@ -13,7 +13,7 @@ import logging
 from tqdm import tqdm
 import pandas as pd
 
-from evaluation.core.openai.openai import get_chat_completion
+from app.services.openai import OpenAIHandler
 
 
 CORRECTNESS_SYS_TMPL = """
@@ -73,7 +73,7 @@ class CorrectnessEvaluator:
         self.threshold = threshold
         self.max_tokens = max_tokens
 
-    def run_correctness_eval(self, query_str: str, reference_answer: str, generated_answer: str):
+    def run_correctness_eval(self, query_str: str, reference_answer: str, generated_answer: str, openai_handler: OpenAIHandler):
         """
         Evaluates the correctness of a generated answer against a reference answer.
 
@@ -92,9 +92,14 @@ class CorrectnessEvaluator:
 
             system_prompt = CORRECTNESS_SYS_TMPL
 
-            open_ai_response = get_chat_completion(
-                self.openai_api_key, user_prompt, system_prompt, ANSWER_JSON_SCHEMA, model=self.model, max_tokens=self.max_tokens
+            open_ai_response = openai_handler.get_chat_completion(
+                openai_api_key=self.openai_api_key,
+                user_prompt=user_prompt,
+                system_prompt=system_prompt,
+                answer_json_schema=ANSWER_JSON_SCHEMA,
+                max_tokens=self.max_tokens,
             )
+
             json_answer = json.loads(open_ai_response.get("choices")[0].get("message").get("content"))
 
             score = json_answer["score"]
@@ -138,6 +143,8 @@ class CorrectnessEvaluator:
         Returns:
         - pd.DataFrame, the original dataframe with additional columns for score, reasoning, and passing status.
         """
+        openai_handler = OpenAIHandler(model=self.model)
+
         fieldnames = [resource_id_column, "score", "reasoning", "passing"]
 
         with open(output_file, mode="w", newline="") as file:
@@ -149,9 +156,14 @@ class CorrectnessEvaluator:
             try:
                 for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing correctness"):
                     result = self.run_correctness_eval(
-                        row[query_column], row[reference_answer_column], row[generated_answer_column]
+                        row[query_column],
+                        row[reference_answer_column],
+                        row[generated_answer_column],
+                        openai_handler=openai_handler,
                     )
+
                     result[resource_id_column] = row[resource_id_column]
+
                     # Write the result to the CSV file
                     writer.writerow(result)
 

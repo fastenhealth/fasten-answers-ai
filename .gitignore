@@ -119,11 +119,13 @@ dmypy.json
 scripts/rag_evaluation/data/flat_files/
 
 # data
-*/data
+app/data/*
+/app/data/resources_summarized.csv
+!/app/data/batch_cn1d3YOzng9mkfZawyqfkL1k_output_33a6_ids_dates_no_urls.jsonl
+!/app/data/batch_O9aiHyHpLDHCaaxZzcw1dqDS_output_no_ids_dates_no_urls.jsonl
 scripts/rag_evaluation/evaluate_generation/generation_speed/data/*.csv
 scripts/rag_evaluation/evaluate_retrieval/data/output/*csv
 
 /models
-/data/
 !/evaluation/data/
 evaluation/evaluation_dataset/legacy_fix
