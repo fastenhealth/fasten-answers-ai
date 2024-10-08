@@ -24,6 +24,21 @@ It uses the following components:
    - An LLM, served by llama.cpp, generates a response based on the retrieved results.
    - You can find more details on how to setup the generation in the [generation strategies documentation](./docs/indexing_strategies.md).
 
+## Hardware and technical recommendations
+
+Since the project utilizes llama.cpp for LLM execution, it’s crucial to configure the command properly to optimize performance based on the available hardware resources. All parameters can be found in the [llama.cpp server documentation](https://github.com/ggerganov/llama.cpp/blob/master/examples/server/README.md), but for this project, we use the following configuration:
+
+| Parameter    | Explanation |
+| -------- | ------- |
+| -n, --predict, --n-predict N | number of tokens to predict (default: -1, -1 = infinity, -2 = until context filled) |
+| -c, --ctx-size N | size of the prompt context as a power of 2 (default: 0, 0 = loaded from model)     |
+| -t, --threads N | number of threads to use during generation (default: -1). The higher, the faster the inference will be. |
+| -np, --parallel N (optional)| number of parallel sequences to decode (default: 1). If for example you decide to process 4 sequences in a batch in parallel, you shoud set -np 4. |
+
+To configure these parameters based on the available resources of the local machine, modify the `command` line in the `llama` service section within the [docker-compose.yml](docker-compose.yml) file directly.
+
+If the hardware has sufficient resources to run llama.cpp in parallel, it is recommended to include the -np parameter in the Docker Compose configuration before running `docker compose up`. In this scenario, the endpoints that support parallel execution, as specified in [routes](./app/routes/), are documented in [evaluate_generation.md](./docs/evaluate_generation.md) and [evaluate_retrieval.md](./docs/evaluate_retrieval.md).
+
 ## Running the Project
 
 ### Prerequisites
