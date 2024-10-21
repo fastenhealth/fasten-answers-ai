@@ -7,40 +7,41 @@ from transformers import AutoTokenizer
 load_dotenv()
 
 
-SYSTEM_PROMPT = (
+LLAMA3_PROMPT = (
+    "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
     "A chat between a curious user and an intelligent, "
     "polite medical assistant. The assistant provides detailed, "
     "helpful answers to the user's medical questions, "
     "including accurate references where applicable. "
     "The user will give you context and then his/her "
-    "question will come in."
-)
-
-LLAMA3_PROMPT = (
-    "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\n"
-    "{system_prompt}<|eot_id|>\n"
+    "question will come in.<|eot_id|>\n"
     "<|start_header_id|>user<|end_header_id|>\n\n"
     "Context information is below.\n "
     "---------------------\n "
-    "{user_prompt}\n"
+    "{context}\n"
     "---------------------\n "
     "Given the context information (if there is any), "
     "this is my message: "
-    "{question}<|eot_id|>\n"
+    "{query}<|eot_id|>\n"
     "<|start_header_id|>assistant<|end_header_id|>"
 )
 
 PHI_3_5_PROMPT = (
     "<|system|>"
-    "{system_prompt}<|end|>"
+    "A chat between a curious user and an intelligent, "
+    "polite medical assistant. The assistant provides detailed, "
+    "helpful answers to the user's medical questions, "
+    "including accurate references where applicable. "
+    "The user will give you context and then his/her "
+    "question will come in.<|end|>"
     "<|user|>"
     "Context information is below.\n "
     "---------------------\n "
-    "{user_prompt}\n"
+    "{context}\n"
     "---------------------\n "
     "Given the context information (if there is any), "
     "this is my message: "
-    "{question}"
+    "{query}"
     "<|end|>"
     "<|assistant|>"
 )

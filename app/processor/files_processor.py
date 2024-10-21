@@ -9,9 +9,13 @@ def csv_to_dict(file):
     return [dict(row) for row in reader]
 
 
-def ensure_data_directory_exists():
-    project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    data_dir = os.path.join(project_root, "data")
+def ensure_data_directory_exists(data_folder: str = None):    
+    if not data_folder:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        data_dir = os.path.join(project_root, "data")
+    else:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+        data_dir = os.path.join(project_root, data_folder)
 
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
