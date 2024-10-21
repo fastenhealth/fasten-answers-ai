@@ -1,7 +1,12 @@
 import random
 import pandas as pd
 
-from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.settings import BASE_TEMPLATE, TEMPLATES, EXTRA_INFO_LIST, USER_QUESTIONS
+from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.settings import (
+    BASE_TEMPLATE,
+    TEMPLATES,
+    EXTRA_INFO_LIST,
+    USER_QUESTIONS,
+)
 
 
 def create_contexts_and_questions(

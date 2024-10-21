@@ -8,11 +8,7 @@ from app.config.settings import logger
 from app.processor.files_processor import ensure_data_directory_exists, generate_output_filename
 
 
-def generate_responses(params,
-                       data: pd.DataFrame,
-                       llm_client,
-                       model_prompt,
-                       batch_size=4):
+def generate_responses(params, data: pd.DataFrame, llm_client, model_prompt, batch_size=4):
     DEFAULT_PARAMS = {
         "n_predict": 400,
         "temperature": 0.0,
@@ -38,28 +34,28 @@ def generate_responses(params,
     data_dir = ensure_data_directory_exists("data_speed")
 
     output_file = os.path.join(data_dir, generate_output_filename(process="speed_generation", task="evaluation"))
-    
+
     # Fieldnames for the CSV
     fieldnames = [
-            "model",
-            "context_size",
-            "total_cores",
-            "context",
-            "question",
-            "response",
-            "temperature",
-            "n_predict",
-            "tokens_predicted",
-            "tokens_evaluated",
-            "prompt_n",
-            "prompt_ms",
-            "prompt_per_token_ms",
-            "prompt_per_second",
-            "predicted_n",
-            "predicted_ms",
-            "predicted_per_token_ms",
-            "predicted_per_second",
-        ]
+        "model",
+        "context_size",
+        "total_cores",
+        "context",
+        "question",
+        "response",
+        "temperature",
+        "n_predict",
+        "tokens_predicted",
+        "tokens_evaluated",
+        "prompt_n",
+        "prompt_ms",
+        "prompt_per_token_ms",
+        "prompt_per_second",
+        "predicted_n",
+        "predicted_ms",
+        "predicted_per_token_ms",
+        "predicted_per_second",
+    ]
 
     with open(output_file, "w", newline="") as output_file:
         dict_writer = csv.DictWriter(output_file, fieldnames=fieldnames)
@@ -73,7 +69,7 @@ def generate_responses(params,
                 full_response = llm_client.chat(
                     query=query, context=context, stream=False, model_prompt=model_prompt, params=DEFAULT_PARAMS
                 )
-                
+
                 result = {
                     "model": full_response["model"],
                     "context_size": row["context_size"],

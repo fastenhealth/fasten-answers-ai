@@ -5,7 +5,9 @@ from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.pa
 from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.settings import MODEL_SETTINGS
 
 from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.generator import generate_responses
-from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.contexts_and_questions import create_contexts_and_questions
+from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.contexts_and_questions import (
+    create_contexts_and_questions,
+)
 
 
 def main():
@@ -15,8 +17,7 @@ def main():
     model_name = params.get("model")
     model_prompt = MODEL_SETTINGS[model_name]["model_prompt"]
 
-    df_contexts_and_questions = create_contexts_and_questions(MODEL_SETTINGS[
-        model_name]["tokenizer"])
+    df_contexts_and_questions = create_contexts_and_questions(MODEL_SETTINGS[model_name]["tokenizer"])
 
     generate_responses(params, df_contexts_and_questions, llm_client, model_prompt)
 
