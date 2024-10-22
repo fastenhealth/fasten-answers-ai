@@ -1,8 +1,12 @@
 import random
-import os
-import pickle
+import pandas as pd
 
-from .settings import BASE_TEMPLATE, TEMPLATES, EXTRA_INFO_LIST, USER_QUESTIONS
+from evaluation.evaluation_metrics.evaluate_generation.generation_speed.utils.settings import (
+    BASE_TEMPLATE,
+    TEMPLATES,
+    EXTRA_INFO_LIST,
+    USER_QUESTIONS,
+)
 
 
 def create_contexts_and_questions(
@@ -12,8 +16,7 @@ def create_contexts_and_questions(
     extra_info_list: list = EXTRA_INFO_LIST,
     user_questions: list = USER_QUESTIONS,
 ) -> dict:
-    contexts = {}
-    questions = {}
+    data = []
 
     for target_token_size in range(100, 1600, 100):
         while True:
@@ -29,7 +32,7 @@ def create_contexts_and_questions(
                 user_question=question,
             )
 
-            # Usar return_tensors=None para evitar PyTorch
+            # USe return_tensors=None to avoid PyTorch
             tokens = tokenizer.encode(context, return_tensors=None)
             token_count = len(tokens)
 
@@ -41,27 +44,10 @@ def create_contexts_and_questions(
 
             # Adjust context
             if token_count >= target_token_size - 10 and token_count <= target_token_size + 10:
-                contexts[target_token_size] = context
+                context = context.replace(question, "")
+                data.append((context, question, target_token_size))
                 break
 
-        contexts[target_token_size] = contexts[target_token_size].replace(question, "")
-        questions[target_token_size] = question
+        df = pd.DataFrame(data, columns=["context", "question", "context_size"])
 
-    return contexts, questions
-
-
-def create_contexts_and_questions_if_not_exist(
-    tokenizer, contexts_path: str = "./data/contexts.pkl", questions_path: str = "./data/questions.pkl"
-) -> dict:
-    if os.path.exists(contexts_path) and os.path.exists(questions_path):
-        with open(contexts_path, "rb") as f1, open(questions_path, "rb") as f2:
-            contexts = pickle.load(f1)
-            questions = pickle.load(f2)
-
-    else:
-        contexts, questions = create_contexts_and_questions(tokenizer=tokenizer)
-        with open(contexts_path, "wb") as f1, open(questions_path, "wb") as f2:
-            pickle.dump(contexts, f1)
-            pickle.dump(questions, f2)
-
-    return contexts, questions
+    return df

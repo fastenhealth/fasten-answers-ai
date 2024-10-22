@@ -6,14 +6,13 @@ This project is designed to evaluate the response generation speed of various la
 
 - Docker installed and configured
 - Python 3.9+
-- Dependencies listed in `./fasten-answers-ai/scripts/requirements-dev.txt`
+- Dependencies listed in `./fasten-answers-ai/requirements.txt`
 
 ## 2. Project Structure
 
-- `main.py`: Main script that loads configuration parameters, configures the LLM client, and generates responses.
+- `main.py`: Main script that loads configuration parameters, create contexts and questions, and generates responses.
 - `contexts_and_questions.py`: Contains logic to create contexts and questions based on templates.
 - `generator.py`: Generates model responses and stores them in a CSV file.
-- `llm_client.py`: Configures the LLM client to interact with the models.
 - `settings.py`: System configuration, such as prompts, templates, and supported models.
 - `data/input.json`: Configuration file where model parameters are specified, including the host, model, number of cores, temperature, etc.
 
@@ -29,9 +28,9 @@ This project is designed to evaluate the response generation speed of various la
 2. Create a virtual environment and install dependencies:
 
     ```bash
-    python -m venv venv-dev
-    source venv-dev/bin/activate
-    pip install -r requirements-dev.txt
+    python -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
     ```
 
 3. Ensure you have the models in the `fasten-answers-ai/models` folder in .gguf format. Supported models are:
@@ -40,12 +39,7 @@ This project is designed to evaluate the response generation speed of various la
 
 ## 4. Configuration
 
-1. Go to generation speed evaluation folder
-
-    ```bash
-    cd rag_evaluation/evaluate_generation/generation_speed
-    ```
-2. You must modify the values in the `data/input.json` file to configure the model, number of cores, temperature, and other parameters. As example:
+1. You must modify the values in the `evaluation/evaluation_metrics/evaluate_generation/generation_speed/data/input.json` file to configure the model, number of cores, temperature, and other parameters. As example:
 
 ```json
 {
@@ -69,36 +63,49 @@ This project is designed to evaluate the response generation speed of various la
 
 ## 5. Running the model
 
-To run a model, ensure the Docker container with llama.cpp is active. Below is an example of running the Phi 3.5 mini model in Docker using llama.cpp from the root directory of the repository:
+1. Run llama.cpp, using docker. In this example we use Phi-3.5-mini-instruct-F16, but feel free to change the model if required:
 
 ```bash
-docker run --rm -p 8090:9090 -v $(pwd)/models:/models ghcr.io/ggerganov/llama.cpp:server -m  models/Phi-3.5-mini-instruct-F16.gguf -t 10 -n 400 -c 2048 --host 0.0.0.0 --port 9090
+docker run --rm -p 9090:9090 -v $(pwd)/models:/models ghcr.io/ggerganov/llama.cpp:server -m  models/Phi-3.5-mini-instruct-F16.gguf -t 10 -n 400 -c 2048 --host 0.0.0.0 --port 9090
 ```
 
 ### Command Explanation
 
-    -p 8090:9090: Exposes port 9090 of the container on port 8090 of the host.
+    -p 9090:9090: Exposes port 9090 of the container on port 9090 of the host.
     -v $(pwd)/models:/models: Mounts the models folder to the container.
     -m models/Phi-3.5-mini-instruct-F16.gguf: Specifies the model to use.
     -t 10: Number of cores to use.
     -n 400: Number of tokens to predict.
     -c 2048: Context size.
 
-## 6. Running the Main Script
+## 6. Running Elastic Search container
 
-Before running the code, make sure you added your huggingface token in your `.env` file.
+While Elasticsearch is not required for evaluating generation speed, since we're using the llama.cpp client declared in the main app (which imports Elasticsearch), we need to run the container to avoid errors.
+
+```bash
+docker run --rm -p 9200:9200 \                    
+  -e "discovery.type=single-node" \
+  -e "xpack.security.enabled=false" \
+  -e "xpack.security.http.ssl.enabled=false" \
+  --memory="512m" \
+  -v data:/usr/share/elasticsearch/data \
+  --name elasticsearch \
+  docker.elastic.co/elasticsearch/elasticsearch:8.12.1
+```
+
+## 7. Running the Main Script
 
 Once the container is running and `input.json` is configured, you can run the `main.py` script:
 
 ```bash
-python main.py
+python -m evaluation.evaluation_metrics.evaluate_generation.generation_speed.main
 ```
     
-This script will generate responses based on the defined contexts and questions, and save the results in a CSV file located in the data folder.
+This script will generate responses based on the defined contexts and questions, and save the results in a CSV file located in the data_speed folder in the root of the repository.
     
 ### Results
 
-The generated results will be stored in the file specified in the output_file field in input.json. The CSV will contain the following columns:
+The generated results will be stored in data_speed folder in the root of the repository. The CSV will contain the following columns:
 
     model: Name of the model used.
     context_size: Size of the context in tokens.
