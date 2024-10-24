@@ -18,5 +18,5 @@ __pycache__/
 
 # Data
 /data
+/data_speed
 *.csv
-

@@ -16,7 +16,6 @@ class RerankingService:
         :return tuple(str, float): list of tuples containing the document and its score
         """
         scores = self.reranker.compute_score([[query, doc.content] for doc in documents], normalize=True)
-        print(scores)
 
         ranked_docs = sorted(zip(documents, scores), key=lambda x: x[1], reverse=True)
         return ranked_docs
