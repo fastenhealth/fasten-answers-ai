@@ -54,7 +54,7 @@ def search_query(
         for result in results
     ]
     if rerank_top_k > 0:
-        search_results = [result for result, score in reranker_service.rerank(query_text, search_results)[:k]]
+        search_results = [result for result, score in reranker_service.rerank(query_text, search_results)][:k]
     return search_results
 
 

@@ -11,15 +11,28 @@ services:
       ES_INDEX_NAME: fasten-index
       EMBEDDING_MODEL_NAME: all-MiniLM-L6-v2
       LLM_HOST: http://llama:9090
-
+      CLEARML_CONFIG_FILE: /clearml.conf
+      NVIDIA_VISIBLE_DEVICES: all
     ports:
       - "8000:8000"
+      - "8008:8008"  # ClearML API server
+      - "8080:8080"  # ClearML web server
+      - "8085:8085"  # ClearML file server
     volumes:
       - ./data:/app/data
+      - /home/danib/clearml.conf:/clearml.conf
+      - /home/danib/.clearml:/.clearml
     depends_on:
       elasticsearch:
         condition: service_healthy
     restart: always
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     command: >
       uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
@@ -32,24 +45,24 @@ services:
       xpack.security.http.ssl.enabled: "false"
     ports:
       - "9200:9200"
-    mem_limit: 512m
+    mem_limit: 1g
     volumes:
       - esdata:/usr/share/elasticsearch/data
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsSL http://localhost:9200/_cat/health || exit 1" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      interval: 20s
+      timeout: 60s
+      retries: 5
 
-  llama:
-    container_name: fasten-llama
-    image: ghcr.io/ggerganov/llama.cpp:server
-    volumes:
-      - ./models:/models
-    command: >
-      -m models/Meta-Llama-3.1-8B-Instruct-F16-Q5_K_M.gguf -n 450 -c 2048 -t 10 --host 0.0.0.0 --port 8080
-    ports:
-      - "8090:8090"
+  # llama:
+  #   container_name: fasten-llama
+  #   image: ghcr.io/ggerganov/llama.cpp:server
+  #   volumes:
+  #     - ./models:/models
+  #   command: >
+  #     -m models/Phi-3.5-mini-instruct-F16.gguf -n 450 -c 2048 -t 10 --host 0.0.0.0 --port 8080
+  #   ports:
+  #     - "8090:8090"
 
 volumes:
   esdata:

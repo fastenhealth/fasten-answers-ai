@@ -16,6 +16,7 @@ from app.processor.files_processor import ensure_data_directory_exists, generate
 from app.processor.openai_processor import jsonl_dataset_to_dataframe
 from app.services.search_documents import fetch_all_documents
 from app.services.conversation import batch_generation_synchronous
+from app.services.reranking import RerankingService
 
 
 router = APIRouter()
@@ -30,6 +31,7 @@ async def evaluate_retrieval(
     search_embedding_boost: float = Form(1),
     k: int = Form(5),
     rerank_top_k: int = Form(0),
+    rerank_device: str = Form(None),
     urls_in_resources: bool = Form(None),
     questions_with_ids_and_dates: str = Form(None),
     chunk_size: int = Form(None),
@@ -72,7 +74,10 @@ async def evaluate_retrieval(
             unique_task_name = f"{clearml_experiment_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             task = Task.init(project_name=clearml_project_name, task_name=unique_task_name)
             task.connect(params)
-
+        
+        # Call reranking service
+        reranker_service = RerankingService(rerank_device)
+        
         retrieval_metrics = evaluate_resources_summaries_retrieval(
             es_client=es_client,
             embedding_model=embedding_model,
@@ -90,6 +95,8 @@ async def evaluate_retrieval(
                 task.get_logger().report_single_value(name=series_name, value=value)
 
             task.close()
+        else:
+            print(retrieval_metrics)
 
         return retrieval_metrics
 
